@@ -78,4 +78,12 @@ text - текст обращения
     response = generate(prompt)
     print("Ответ получен")
 
-    return json.loads(response)
+    print("Сырой ответ LLM:")
+    print(response[:500])
+
+    try:
+        return json.loads(response)
+    except json.JSONDecodeError as e:
+        print(f"Ошибка парсинга JSON: {e}")
+        print("Первые 200 символов ответа:", response[:200])
+        raise
