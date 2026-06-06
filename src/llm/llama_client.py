@@ -3,7 +3,7 @@ import time
 
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL_NAME = "qwen2.5:7b"
+MODEL_NAME = "qwen2.5:7b-instruct-q4_K_M"
 
 def generate(prompt: str) -> str:
 
