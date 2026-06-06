@@ -12,7 +12,7 @@ INPUT_FILE = "data/raw/test_40.xlsx"
 
 CLEANED_FILE = "data/processed/test_40_cleaned.csv"
 
-CLASSIFIED_FILE = "data/processed/test_40_classified_qwen2.5-coder:14b.csv"
+CLASSIFIED_FILE = "data/processed/test_40_classified_qwen7b.csv"
 
 
 def extract_and_clean():
