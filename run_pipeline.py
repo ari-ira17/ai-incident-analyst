@@ -15,7 +15,7 @@ CLEANED_FILE = "data/processed/test_40_cleaned.csv"
 
 COMPRESSED_FILE = "data/processed/test_40_compressed.csv"
 
-CLASSIFIED_FILE = "data/processed/test_40_classified_qemma.csv"
+CLASSIFIED_FILE = "data/processed/test_40_classified_aya8b_zip_text.csv"
 
 
 def extract_and_clean():
