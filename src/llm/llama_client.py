@@ -14,7 +14,14 @@ def generate(prompt: str) -> str:
         json={
             "model": MODEL_NAME,
             "prompt": prompt,
-            "stream": False
+            "stream": False,
+            "options": {
+                "num_predict": -1,
+                "temperature": 0.1,
+                "num_ctx": 4096,
+                "num_thread": 4,
+                "top_k": 10
+            }
         },
         timeout=300
     )

@@ -1,5 +1,6 @@
 import pandas as pd
 import logging
+import re
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
@@ -8,7 +9,6 @@ class IncidentDataCleaner:
         self.df = df.copy()
 
     def show_basic_stats(self):
-        """Выводит базовую статистику (EDA) в консоль."""
         logging.info(f"Размер датасета: {self.df.shape[0]} строк, {self.df.shape[1]} колонок.")
         
         missing_stats = self.df.isnull().sum()
@@ -21,7 +21,6 @@ class IncidentDataCleaner:
         return self
 
     def remove_duplicates(self):
-        """Удаляет полные дубликаты инцидентов."""
         initial_shape = self.df.shape[0]
         subset_cols = [
                 "Отдел",
@@ -46,16 +45,11 @@ class IncidentDataCleaner:
         return self
 
     def convert_duration_column(self, col_name='Время с начала создания инцидента до окончания'):
-        """
-        Преобразует указанную колонку в формат timedelta.
-        Строки вида '11 days 12:10:25.217000' -> Timedelta.
-        """
         if col_name in self.df.columns:
             self.df[col_name] = pd.to_timedelta(self.df[col_name], errors='coerce')
         return self
 
     def handle_missing_values(self):
-        """Обрабатывает пропущенные значения (NaN/NaT) с учётом типов данных."""
         if 'Текст инцидента' in self.df.columns:
             initial_rows = self.df.shape[0]
             self.df = self.df.dropna(subset=['Текст инцидента'])
@@ -71,12 +65,31 @@ class IncidentDataCleaner:
         return self
 
     def clean_text_formatting(self):
-        """Очищает текст от лишних пробелов, табуляций и переносов."""
         if 'Текст инцидента' in self.df.columns:
             self.df['Текст инцидента'] = self.df['Текст инцидента'].astype(str).replace(r'\s+', ' ', regex=True).str.strip()
         return self
 
+    def optimize_text_for_llm(self):
+        if 'Текст инцидента' not in self.df.columns:
+            return self
+
+        # Список мусорных слов, которые не несут смысла для классификации
+        stop_words = {
+            "здравствуйте", "добрый", "день", "вечер", "пожалуйста", "прошу", "вас", 
+            "уважаемый", "меня", "мы", "наш", "мне", "свои", "который", "чтобы", 
+            "очень", "уже", "администрация", "подскажите", "жалоба", "обращение"
+        }
+
+        def process_text(text):
+            # Переводим в нижний регистр и оставляем только слова и цифры (убираем знаки препинания)
+            words = re.findall(r'[а-яёa-z0-9]+', text.lower())
+            # Фильтруем текст, удаляя слова из списка stop_words
+            filtered_words = [w for w in words if w not in stop_words]
+            return " ".join(filtered_words)
+
+        logging.info("Запущена очистка текста от мусорных слов...")
+        self.df['Текст инцидента'] = self.df['Текст инцидента'].astype(str).apply(process_text)
+        return self
+
     def get_dataframe(self) -> pd.DataFrame:
-        """Возвращает очищенный датафрейм."""
         return self.df
-       

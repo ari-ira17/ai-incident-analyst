@@ -1,4 +1,5 @@
 import pandas as pd
+import time
 
 from src.ingestion.excel_reader import read_excel
 from src.ingestion.csv_exporter import save_to_csv
@@ -7,22 +8,14 @@ from src.preprocessing.cleaner import IncidentDataCleaner
 from src.llm.batcher import create_batches
 from src.llm.classifier import classify_batch
 
-
 INPUT_FILE = "data/raw/test_40.xlsx"
-
 CLEANED_FILE = "data/processed/test_40_cleaned.csv"
-
-CLASSIFIED_FILE = "data/processed/test_40_classified_qwen2.57b.csv"
-
+CLASSIFIED_FILE = "data/processed/test_40_classified_qwen2.57b_porter.csv"
 
 def extract_and_clean():
-
     print("Этап 1. Загрузка и очистка")
-
     raw_data = read_excel(INPUT_FILE)
-
     df = pd.DataFrame(raw_data)
-
     cleaner = IncidentDataCleaner(df)
 
     cleaned_df = (
@@ -32,87 +25,50 @@ def extract_and_clean():
         .convert_duration_column()
         .handle_missing_values()
         .clean_text_formatting()
+        .optimize_text_for_llm()
         .get_dataframe()
     )
 
-    cleaned_data = cleaned_df.to_dict(
-        orient="records"
-    )
-
-    save_to_csv(
-        cleaned_data,
-        CLEANED_FILE
-    )
-
-    print(
-        f"Файл сохранён: {CLEANED_FILE}"
-    )
-
+    cleaned_data = cleaned_df.to_dict(orient="records")
+    save_to_csv(cleaned_data, CLEANED_FILE)
+    print(f"Файл сохранён: {CLEANED_FILE}")
     return cleaned_df
 
-
 def classify_incidents(df):
-
     print("Этап 2. Классификация")
-
     df = df.copy()
-
     df["incident_id"] = range(len(df))
-
-    records = df.to_dict(
-        orient="records"
-    )
-
+    records = df.to_dict(orient="records")
     all_results = []
 
-    for batch_number, batch in enumerate(
-        create_batches(records, batch_size=10),
-        start=1
-    ):
-
-        print(
-            f"Обрабатывается батч {batch_number}"
-        )
-
+    for batch_number, batch in enumerate(create_batches(records, batch_size=10), start=1):
+        print(f"Обрабатывается батч {batch_number}")
         try:
-
             result = classify_batch(batch)
-
             all_results.extend(result)
-
+            
+            time.sleep(2) 
+            
         except Exception as e:
-
-            print(
-                f"Ошибка батча {batch_number}: {e}"
-            )
+            print(f"Ошибка батча {batch_number}: {e}")
+            for row in batch:
+                all_results.append({
+                    "incident_id": row["incident_id"],
+                    "is_problem": 0,
+                    "severity": 1,
+                    "problem_tags": []
+                })
 
     result_df = pd.DataFrame(all_results)
-
-    final_df = df.merge(
-        result_df,
-        on="incident_id",
-        how="left"
-    )
-
-    final_df.to_csv(
-        CLASSIFIED_FILE,
-        index=False,
-        encoding="utf-8-sig"
-    )
-
-    print(
-        f"Результат сохранён: {CLASSIFIED_FILE}"
-    )
-
+    final_df = df.merge(result_df, on="incident_id", how="left")
+    
+    final_df.to_csv(CLASSIFIED_FILE, index=False, encoding="utf-8-sig")
+    print(f"Результат сохранён: {CLASSIFIED_FILE}")
 
 def main():
-
     cleaned_df = extract_and_clean()
-
     classify_incidents(cleaned_df)
-
     print("Pipeline завершён")
-
 
 if __name__ == "__main__":
     main()
