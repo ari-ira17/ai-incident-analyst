@@ -12,7 +12,7 @@ INPUT_FILE = "data/raw/test_40.xlsx"
 
 CLEANED_FILE = "data/processed/test_40_cleaned.csv"
 
-CLASSIFIED_FILE = "data/processed/test_40_classified_qwen2.5-coder:14b.csv"
+CLASSIFIED_FILE = "data/processed/test_40_classified_qwen2.5_7b_batch_2_options.csv"
 
 
 def extract_and_clean():
@@ -29,6 +29,7 @@ def extract_and_clean():
         cleaner
         .show_basic_stats()
         .remove_duplicates()
+        .filter_incident_types()
         .convert_duration_column()
         .handle_missing_values()
         .clean_text_formatting()
@@ -66,7 +67,7 @@ def classify_incidents(df):
     all_results = []
 
     for batch_number, batch in enumerate(
-        create_batches(records, batch_size=10),
+        create_batches(records, batch_size=2),
         start=1
     ):
 
