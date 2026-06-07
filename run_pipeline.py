@@ -29,7 +29,6 @@ def extract_and_clean():
         cleaner
         .show_basic_stats()
         .remove_duplicates()
-        .filter_incident_types()
         .convert_duration_column()
         .handle_missing_values()
         .clean_text_formatting()

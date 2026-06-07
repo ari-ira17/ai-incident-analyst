@@ -1,55 +1,35 @@
 import json
-from src.llm.llama_client import generate
+from src.llm.stage1_is_problem import classify_is_problem
+from src.llm.stage2_topic import classify_topic
+from src.llm.stage3_department import classify_department_batch
 
 def classify_new_incidents_batch(batch):
-    llm_input = []
-
+    """
+    Полный пайплайн классификации из 3 этапов:
+    1. Определяем is_problem (LLM)
+    2. Определяем topic (LLM) - только для проблем
+    3. Определяем department (правила) - для всех
+    """
+    
+    results_1 = classify_is_problem(batch)
+    is_problem_dict = {r["incident_id"]: r["is_problem"] for r in results_1}
+    
+    problem_batch = [row for row in batch if is_problem_dict.get(row["incident_id"], 0) == 1]
+    
+    results_2 = classify_topic(problem_batch) if problem_batch else []
+    topic_dict = {r["incident_id"]: r["topic"] for r in results_2}
+    
+    results_3 = classify_department_batch(batch)
+    department_dict = {r["incident_id"]: r["department"] for r in results_3}
+    
+    final_results = []
     for row in batch:
-        # Логика: Тип инцидента "Решаемый" и "Не решаемый" -> проблема, остальное -> не проблема
-        inc_type = str(row.get("Тип инцидента", "")).strip().lower()
-        if "решаемый" in inc_type:
-            is_problem_ground_truth = 1
-        else:
-            is_problem_ground_truth = 0
-
-        llm_input.append({
-            "incident_id": row["incident_id"],
-            "municipality": str(row.get("Муниципалитет", "")),
-            "text": str(row.get("Текст инцидента", ""))
+        incident_id = row["incident_id"]
+        final_results.append({
+            "incident_id": incident_id,
+            "is_problem": is_problem_dict.get(incident_id, 0),
+            "topic": topic_dict.get(incident_id, ""),
+            "department": department_dict.get(incident_id, "Дежурная служба")
         })
-
-    prompt = f"""Ты — эксперт-аналитик муниципальных служб Омской области.
-Твоя задача — проанализировать текст инцидента и предсказать: тему, подходящую службу (отдел) и статус проблемы.
-
-### ИНСТРУКЦИЯ ДЛЯ ВЫХОДНЫХ ПОЛЕЙ:
-1. is_problem: 1 (если это жалоба, авария или требует решения), 0 (если это просто инфо, благодарность).
-2. topic: Точная тема инцидента (например: "Отопление", "Ремонт дорог", "Вывоз мусора", "Освещение").
-3. department: Профильная служба/отдел для решения (например: "Департамент городского хозяйства", "Управление дорожного хозяйства", "АО ОмскРТС", "Управляющая компания").
-
-### ПРИМЕРЫ ДЛЯ ОБУЧЕНИЯ (Few-Shot):
-Пример 1:
-Вход: {{"municipality": "Омск", "text": "на улице вокзальная опять прорвало трубу горячей водой отопления нет"}}
-Выход: {{"is_problem": 1, "topic": "Отопление", "department": "Тепловая компания / АО ОмскРТС"}}
-
-Пример 2:
-Вход: {{"municipality": "Омск", "text": "хочу выразить огромную благодарность за чистый парк и новые скамейки"}}
-Выход: {{"is_problem": 0, "topic": "Благоустройство", "department": "Управление дорожного хозяйства и благоустройства"}}
-
-Оцени следующие данные строго по примерам выше.
-Выведи ответ СТРОГО в формате JSON-массива объектов. Без разметки ```json, без вступлений.
-
-Данные для анализа:
-{json.dumps(llm_input, ensure_ascii=False)}
-"""
-
-    print("Отправляем запрос в LLM (Новый классификатор)...")
-    response = generate(prompt).strip()
-    print("Ответ получен")
-
-    # На всякий случай очищаем от возможных артефактов разметки markdown
-    if response.startswith("```json"):
-        response = response.split("```json")[1].split("```")[0].strip()
-    elif response.startswith("```"):
-        response = response.split("```")[1].split("```")[0].strip()
-
-    return json.loads(response)
+    
+    return final_results
