@@ -11,11 +11,11 @@ from src.llm.text_compressor import compress_batch
 
 INPUT_FILE = "data/raw/test_40.xlsx"
 
-CLEANED_FILE = "data/processed/test_40_cleaned.csv"
+CLEANED_FILE = "data/processed/test_40_cleaned_3stolb.csv"
 
-COMPRESSED_FILE = "data/processed/test_40_compressed.csv"
+COMPRESSED_FILE = "data/processed/test_40_compressed_qwen2_5_7b_newprompt3.csv"
 
-CLASSIFIED_FILE = "data/processed/test_40_classified_aya8b_zip_text.csv"
+CLASSIFIED_FILE = "data/processed/test_40_classified_qwen2_5_7b_zip_newprompt3_text.csv"
 
 
 def extract_and_clean():
@@ -32,6 +32,7 @@ def extract_and_clean():
         cleaner
         .show_basic_stats()
         .remove_duplicates()
+        .filter_incident_types()
         .convert_duration_column()
         .handle_missing_values()
         .clean_text_formatting()
