@@ -4,29 +4,30 @@ import time
 OLLAMA_URL = "http://localhost:11434/api/generate"
 MODEL_NAME = "qwen2.5:7b"
 
-def generate(prompt: str) -> str:
+
+def generate(prompt: str, options=None) -> str:
     start = time.time()
-
-    response = requests.post(
-        OLLAMA_URL,
-        json={
-            "model": MODEL_NAME,
-            "prompt": prompt,
-            "stream": False,
-            "options": {
-                "num_predict": 256,
-                "temperature": 0.1,
-                "num_ctx": 14000,
-                "num_thread": 4,
-                "top_k": 1,
-                "top_p": 0.9,
-                "repeat_penalty": 1.0,
-                "mirostat": 0
-            }
-        },
-        timeout=300
-    )
-
-    print(f"  Запрос выполнялся {time.time() - start:.1f} сек")
-    response.raise_for_status()
+    if options is None:
+        options = {
+    "num_ctx": 1024,        
+    "num_thread": 8,          
+    "num_predict": 256,       
+    "temperature": 0.1,
+    "top_k": 1,              
+    "mirostat": 0,            
+}
+    payload = {
+        "model": MODEL_NAME,
+        "prompt": prompt,
+        "options": options,
+        "format": "json",
+        "stream": False
+    }
+    try:
+        response = requests.post(OLLAMA_URL, json=payload, timeout=300)
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        print(f"Ошибка {response.status_code}: {response.text}")  
+        raise
+    print(f"Запрос выполнялся {time.time() - start:.1f} сек")
     return response.json()["response"]
