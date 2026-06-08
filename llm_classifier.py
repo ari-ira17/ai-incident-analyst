@@ -15,7 +15,7 @@ FINAL_OUTPUT_FILE = "data/processed/final_predictions.csv"
 def main():
     extract_and_clean()
     
-    df = pd.read_csv(CLEANED_FILE)
+    df = pd.read_csv(CLEANED_FILE).head(5)
     df["incident_id"] = range(len(df))
     records = df.to_dict(orient="records")
     
