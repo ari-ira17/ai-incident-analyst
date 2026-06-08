@@ -6,7 +6,7 @@ import plotly.express as px
 # Импорт функций предобработки файлов
 from run_fast_pipeline import run_fast_processing
 # ИМПОРТ ВАШЕГО МЕДЛЕННОГО РЕШЕНИЯ
-# from run_slow_pipeline import run_slow_processing 
+from run_pipeline import run_full_slow_pipeline
 
 import sys
 from pathlib import Path
@@ -47,7 +47,7 @@ if uploaded_file is not None:
             if pipeline_mode == "Базовое решение (fast)":
                 run_fast_processing(input_path=TEMP_RAW_PATH, output_path=PROCESSED_CSV_PATH)
             else:
-                dummy_slow_processing(input_path=TEMP_RAW_PATH, output_path=PROCESSED_CSV_PATH)
+                run_full_slow_pipeline(TEMP_RAW_PATH, PROCESSED_CSV_PATH)
                 
             df_processed = pl.read_csv(PROCESSED_CSV_PATH)
             analytics = IncidentAnalytics(df_processed)
