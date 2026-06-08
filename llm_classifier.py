@@ -19,7 +19,7 @@ def main():
     df["incident_id"] = range(len(df))
     records = df.to_dict(orient="records")
     
-    print("\nЭТАП 1: Определение is_problem\n")
+    #print("\nЭТАП 1: Определение is_problem\n")
     all_problems = []
     
     for batch_number, batch in enumerate(create_batches(records, batch_size=5), start=1):
@@ -39,11 +39,11 @@ def main():
     problem_df = pd.DataFrame(all_problems)
     df = df.merge(problem_df, on="incident_id", how="left")
     
-    print("\n=ЭТАП 2: Определение темы для ВСЕХ записей\n")
+    #print("\n=ЭТАП 2: Определение темы для ВСЕХ записей\n")
     all_topics = []
     
     for batch_number, batch in enumerate(create_batches(records, batch_size=5), start=1):
-        print(f"Батч {batch_number} (строк: {len(batch)})")
+        #print(f"Батч {batch_number} (строк: {len(batch)})")
         try:
             result = classify_topic(batch)
             all_topics.extend(result)
@@ -61,11 +61,11 @@ def main():
     df['topic'] = df['topic'].fillna("Прочее")
     
     df.to_csv(TEMP_TOPICS_FILE, index=False, encoding="utf-8-sig")
-    print(f"\nПромежуточный результат сохранён: {TEMP_TOPICS_FILE}")
+    #print(f"\nПромежуточный результат сохранён: {TEMP_TOPICS_FILE}")
     
-    print("\nЭТАП 3: Определение отдела\n")
+    #print("\nЭТАП 3: Определение отдела\n")
     add_department_to_csv(TEMP_TOPICS_FILE, FINAL_OUTPUT_FILE)
-    print(f"Финальный файл: {FINAL_OUTPUT_FILE}")
+    #print(f"Финальный файл: {FINAL_OUTPUT_FILE}")
 
 
 if __name__ == "__main__":
