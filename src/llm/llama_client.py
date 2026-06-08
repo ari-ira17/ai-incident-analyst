@@ -2,6 +2,9 @@ import requests
 import time
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
+MODEL_NAME = "qwen2.5:7b"
+
+def generate(prompt: str) -> str:
 # Оставляем твою модель
 MODEL_NAME = "qwen2.5:7b"
 
