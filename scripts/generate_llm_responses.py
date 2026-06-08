@@ -1,24 +1,19 @@
-# ============================================
-# ГЕНЕРАЦИЯ ПЕРСОНАЛИЗИРОВАННЫХ ЧЕРНОВИКОВ ОТВЕТОВ ЧЕРЕЗ LLM
-# ============================================
-# Задача: сгенерировать черновик ответа, который:
-# - Упоминает суть проблемы из жалобы (адрес, что случилось)
-# - НЕ придумывает конкретные действия служб, сроки, имена
-# - Оставляет место для доработки реальным сотрудником
-# ============================================
-
 import pandas as pd
 import re
 import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from src.llm.llama_client import generate, MODEL_QWEN_7B, MODEL_QWEN_3B
+from src.llm.llama_client import generate, MODEL_NAME
 
-DATA_PATH = "data/raw/testovy_fayl.xlsx"
-OUTPUT_PATH = "test_results_llm_first20.csv"
 
-# Примеры персонализированных черновиков — упоминают проблему, но без конкретики по службам
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+DATA_PATH = os.path.join(BASE_DIR, "data", "raw", "test_40.xlsx")
+OUTPUT_PATH = "llm_responses.csv"
+
+
 TEMPLATE_EXAMPLES = """
 Пример 1:
 Жалоба: Здравствуйте, на улице Пушкина уже неделю не чистят снег, тротуары завалены, пройти невозможно.
@@ -51,13 +46,9 @@ def remove_non_russian(text):
     """
     if not isinstance(text, str):
         return text
-    # Удаляем CJK Unified Ideographs (китайские иероглифы)
     text = re.sub(r'[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]', '', text)
-    # Удаляем хирагану и катакану (японские)
     text = re.sub(r'[\u3040-\u309f\u30a0-\u30ff]', '', text)
-    # Удаляем корейский
     text = re.sub(r'[\uac00-\ud7af]', '', text)
-    # Очищаем лишние пробелы
     text = re.sub(r'\s+', ' ', text)
     return text.strip()
 
@@ -93,32 +84,17 @@ def build_prompt(complaint_text, topic_group, subtopic, department, municipality
     return prompt
 
 def main():
-    print("="*60)
-    print("📄 ГЕНЕРАЦИЯ ЧЕРНОВИКОВ ОТВЕТОВ ЧЕРЕЗ LLM")
-    print("="*60)
-    
-    # 1. Загружаем данные
-    print("\n📂 Загрузка данных...")
     df = pd.read_excel(DATA_PATH, sheet_name="Лист1")
-    df_test = df.head(10).copy()
+    df_test = df.head(5).copy()
     print(f"✅ Загружено {len(df_test)} тестовых записей")
     
-    # 2. Очищаем текст
     df_test["Текст инцидента"] = df_test["Текст инцидента"].apply(clean_text)
     df_test["Группа тем"] = df_test["Группа тем"].fillna("Общее")
     df_test["Тема"] = df_test["Тема"].fillna("Обращение")
     df_test["Отдел"] = df_test["Отдел"].fillna("Администрация")
     df_test["Муниципалитет"] = df_test["Муниципалитет"].fillna("Омская область")
     
-    # 3. Выбираем модель
     
-    model_name = MODEL_QWEN_7B
-    print(f"  Используем: {model_name}")
-    
-    # 4. Генерируем ответы
-    print("\n" + "="*60)
-    print("📝 ГЕНЕРАЦИЯ ОТВЕТОВ")
-    print("="*60)
     
     results = []
     for idx, (_, row) in enumerate(df_test.iterrows()):
@@ -132,27 +108,18 @@ def main():
         if pd.isna(real_response) or real_response == "nan":
             real_response = ""
         real_response = clean_text(real_response)
-        
-        print(f"\n--- Запись {idx+1}/20 ---")
-        print(f"📢 Жалоба: {complaint[:150]}...")
+
         
         prompt = build_prompt(complaint, topic, subtopic, dept, municipality)
         
         try:
-            response = generate(
-                prompt=prompt,
-                model_name=model_name,
-                num_predict=256
-            )
+            response = generate(prompt=prompt)
+            response = remove_non_russian(response.strip()
+        )
             response = remove_non_russian(response.strip())
         except Exception as e:
             response = f"[Ошибка генерации: {e}]"
             print(f"❌ Ошибка: {e}")
-        
-        print(f"🤖 Сгенерировано: {response[:200]}")
-        if real_response:
-            print(f"📋 Оригинал: {real_response[:200]}")
-        print("-"*40)
         
         results.append({
             "id": idx,
@@ -161,7 +128,6 @@ def main():
             "real_response": real_response
         })
     
-    # 5. Сохраняем
     results_df = pd.DataFrame(results)
     results_df.to_csv(OUTPUT_PATH, index=False, encoding='utf-8-sig')
     print(f"\n💾 Результаты сохранены в {OUTPUT_PATH}")

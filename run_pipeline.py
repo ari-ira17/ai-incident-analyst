@@ -6,14 +6,11 @@ from src.preprocessing.cleaner import IncidentDataCleaner
 
 from src.llm.batcher import create_batches
 from src.llm.classifier import classify_batch
-from src.llm.text_compressor import compress_batch
 
 
 INPUT_FILE = "data/raw/test_40.xlsx"
 
 CLEANED_FILE = "data/processed/test_40_cleaned.csv"
-
-COMPRESSED_FILE = "data/processed/test_40_compressed.csv"
 
 CLASSIFIED_FILE = "data/processed/test_40_classified_qemma.csv"
 
@@ -52,33 +49,6 @@ def extract_and_clean():
     )
 
     return cleaned_df
-
-
-def compress_texts(df):
-    """
-    Этап 1.5. Сжатие текстов обращений перед классификацией.
-    """
-    print("Этап 1.5. Сжатие текстов обращений")
-
-    df = df.copy()
-
-    texts = df["Текст инцидента"].tolist()
-
-    print(f"Сжимается {len(texts)} текстов...")
-
-    compressed = compress_batch(texts)
-
-    df["Текст инцидента"] = compressed
-
-    df.to_csv(
-        COMPRESSED_FILE,
-        index=False,
-        encoding="utf-8-sig"
-    )
-
-    print(f"Сжатые тексты сохранены: {COMPRESSED_FILE}")
-
-    return df
 
 
 def classify_incidents(df):
@@ -139,9 +109,7 @@ def main():
 
     cleaned_df = extract_and_clean()
 
-    compressed_df = compress_texts(cleaned_df)
-
-    classify_incidents(compressed_df)
+    classify_incidents(cleaned_df)
 
     print("Pipeline завершён")
 
