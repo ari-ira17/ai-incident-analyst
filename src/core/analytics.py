@@ -58,11 +58,11 @@
             
 #         return result
     
-
+import pandas as pd
 import polars as pl
 import os
 import json
-import ollama
+import requests
 
 class IncidentAnalytics:
     def __init__(self, df: pl.DataFrame):
@@ -161,9 +161,9 @@ class IncidentAnalytics:
         
         # 1. Запись многостраничного Excel-файла
         os.makedirs(os.path.dirname(xlsx_output_path), exist_ok=True)
-        with pl.ExcelWriter(xlsx_output_path, engine="xlsxwriter") as writer:
-            df_excel_top3.write_excel(workbook=writer, sheet_name="Топ-3")
-            df_excel_top10.write_excel(workbook=writer, sheet_name="Топ-10")
+        with pd.ExcelWriter(xlsx_output_path, engine="xlsxwriter") as writer:
+            df_excel_top3.to_pandas().to_excel(writer, sheet_name="Топ-3", index=False)
+            df_excel_top10.to_pandas().to_excel(writer, sheet_name="Топ-10", index=False)
             
         # 2. Формирование структурированного контекста для Ollama
         ai_prompt_context = "АНАЛИТИЧЕСКИЕ ДАННЫЕ ДЛЯ АНАЛИЗА\n===================================\n\n"
@@ -193,15 +193,22 @@ class IncidentAnalytics:
         )
         
         print("Запрос к локальной модели Ollama...")
+        ollama_url = "http://localhost:11434/api/chat"
+        payload = {
+            "model": "qwen2.5:7b",
+            "messages": [
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": f"Сформуй аналитический отчет...\n{ai_prompt_context}"}
+            ],
+            "stream": False,
+            "options": {"temperature": 0.3}
+        }
         try:
-            response = ollama.generate(
-                model="llama3", 
-                system=system_instruction,
-                prompt=f"Сформируй аналитический отчет по следующей информации:\n\n{ai_prompt_context}"
-            )
-            final_report_text = response["response"]
+            resp = requests.post(ollama_url, json=payload, timeout=120)
+            resp.raise_for_status()
+            final_report_text = resp.json()["message"]["content"]
         except Exception as e:
-            final_report_text = f"Ошибка выполнения запроса к Ollama: {str(e)}\n\nСгенерированные данные:\n{ai_prompt_context}"
+            final_report_text = f"Ошибка запроса к Ollama: {str(e)}"
             
         # 4. Сохранение текстового отчета
         os.makedirs(os.path.dirname(txt_output_path), exist_ok=True)
