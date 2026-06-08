@@ -11,72 +11,58 @@ from run_fast_pipeline import run_fast_processing
 import sys
 from pathlib import Path
 
-# Добавляем корень проекта (родительскую папку src) в пути поиска модулей
-PROJECT_ROOT = Path(__file__).resolve().parent.parent   # если app.py лежит в корне
-# или для файлов в src/core/... :
-# PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent   
 sys.path.insert(0, str(PROJECT_ROOT))
 from src.core.analytics import IncidentAnalytics
 
-# Настройка конфигурации страницы Streamlit
 st.set_page_config(page_title="Анализатор инцидентов", layout="wide")
 st.title("Система анализа инцидентов ЖКХ и муниципалитетов")
 
-# Пути для сохранения временных файлов в рамках текущей сессии
 TEMP_RAW_PATH = "data/raw/temp_uploaded.xlsx"
 PROCESSED_CSV_PATH = "data/processed/тестовый_файл_slow.csv"
 OUTPUT_TXT_REPORT = "data/output/report.txt"
 OUTPUT_XLSX_REPORT = "data/output/top_municipalities.xlsx"
 
-# Временная функция-заглушка для демонстрации медленного решения
 def dummy_slow_processing(input_path: str, output_path: str):
     st.info("Запущен базовый (медленный) пайплайн обработки данных...")
     # Здесь должна вызываться ваша старая логика, которая на выходе перезаписывает PROCESSED_CSV_PATH
     return run_fast_processing(input_path, output_path)
 
-# Боковая панель управления (Sidebar)
 st.sidebar.header("Параметры обработки")
 uploaded_file = st.sidebar.file_uploader("Загрузите исходный файл (.xlsx)", type=["xlsx"])
 pipeline_mode = st.sidebar.radio(
     "Выберите режим обработки:", 
-    ["Быстрое решение (Polars / AI)", "Базовое решение (Slow)"]
+    ["Базовое решение (fast)", "AI-решение (slow)"]
 )
 
 execute_button = st.sidebar.button("Запустить анализ")
 
-# Основная логика приложения
 if uploaded_file is not None:
-    # Сохраняем файл на диск для последующей обработки пайплайнами
     os.makedirs(os.path.dirname(TEMP_RAW_PATH), exist_ok=True)
     with open(TEMP_RAW_PATH, "wb") as f:
         f.write(uploaded_file.getbuffer())
         
     if execute_button:
         with st.spinner("Выполняется предобработка данных, расчет метрик и генерация отчетов..."):
-            # Шаг 1: Выбор пайплайна первичной обработки данных
-            if pipeline_mode == "Быстрое решение (Polars / AI)":
+            if pipeline_mode == "Базовое решение (fast)":
                 run_fast_processing(input_path=TEMP_RAW_PATH, output_path=PROCESSED_CSV_PATH)
             else:
                 dummy_slow_processing(input_path=TEMP_RAW_PATH, output_path=PROCESSED_CSV_PATH)
                 
-            # Шаг 2: Чтение унифицированного CSV и запуск аналитического класса
             df_processed = pl.read_csv(PROCESSED_CSV_PATH)
             analytics = IncidentAnalytics(df_processed)
             
-            # Генерация файлов отчетов и получение списка топ-10 муниципалитетов
             top_regions = analytics.build_reports(
                 txt_output_path=OUTPUT_TXT_REPORT,
                 xlsx_output_path=OUTPUT_XLSX_REPORT
             )
             
-            # Сохранение объектов в session_state для сохранения состояния при перезагрузке интерфейса
             st.session_state["top_municipalities"] = top_regions
             st.session_state["analyzer"] = analytics
             st.session_state["processing_done"] = True
             
             st.success("Анализ успешно завершен!")
 
-    # Отображение результатов, если обработка была успешно выполнена
     if st.session_state.get("processing_done"):
         st.subheader("Скачать результаты анализа")
         
@@ -101,18 +87,15 @@ if uploaded_file is not None:
         st.divider()
         st.subheader("Визуализация структуры проблем по муниципалитетам")
         
-        # Интерактивный выбор региона из списка топ-10
         selected_mun = st.selectbox(
             "Выберите муниципалитет для детализации:",
             st.session_state["top_municipalities"]
         )
         
         if selected_mun:
-            # Получаем распределение по темам для выбранного региона напрямую через метод класса
             chart_df = st.session_state["analyzer"].get_region_distribution(selected_mun)
             
             if not chart_df.is_empty():
-                # Преобразуем в pandas исключительно для передачи в Plotly Express
                 pandas_chart_data = chart_df.to_pandas()
                 
                 fig = px.pie(
@@ -128,4 +111,3 @@ if uploaded_file is not None:
                 st.info("В выбранном регионе отсутствуют зарегистрированные инциденты.")
 else:
     st.info("Пожалуйста, загрузите входной файл формата .xlsx в боковую панель для начала работы.")
-

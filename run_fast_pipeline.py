@@ -3,13 +3,11 @@ import os
 import json
 from datetime import datetime
 
-# Пути относительно корня проекта
 INPUT_FILE = "data/raw/основной файл.xlsx" 
 OUTPUT_FILE = "data/processed/основной_файл_slow.csv"
 RANKS_JSON_FILE = "data/reference/problem_rating.json" 
 
 def run_fast_processing(input_path: str = INPUT_FILE, output_path: str = OUTPUT_FILE):
-    # Список нужных вам колонок
     selected_columns = [
         "Отдел", 
         "Исполнитель", 
@@ -18,17 +16,16 @@ def run_fast_processing(input_path: str = INPUT_FILE, output_path: str = OUTPUT_
         "Группа тем", 
         "Тема", 
         "Муниципалитет", 
+        "Улица",
         "Тип инцидента", 
         "Итог", 
         "Текст инцидента"
     ]
     
     print("Этап 1: Чтение большого файла через Polars (выборка только нужных колонок)...")
-    # Читаем только указанные столбцы
     df = pl.read_excel(input_path, engine="calamine", columns=selected_columns)
     
     print("Этап 2: Создание колонки is_problem...")
-    # Сначала определяем, является ли инцидент проблемным
     if "Тип инцидента" in df.columns:
         processed_df = df.with_columns(
             pl.when(pl.col("Тип инцидента").is_in(["Решаемый", "Не решаемый"]))
@@ -45,14 +42,12 @@ def run_fast_processing(input_path: str = INPUT_FILE, output_path: str = OUTPUT_
         with open(RANKS_JSON_FILE, "r", encoding="utf-8") as f:
             ranks_dict = json.load(f)
         
-        # Получаем ранг из JSON
         raw_severity = (
             pl.col("Тема")
             .replace_strict(ranks_dict, default=1)
             .cast(pl.Int32)
         )
         
-        # Если is_problem == 1, берем ранг, иначе ставим 0
         processed_df = processed_df.with_columns(
             pl.when(pl.col("is_problem") == 1)
             .then(raw_severity)
@@ -60,12 +55,10 @@ def run_fast_processing(input_path: str = INPUT_FILE, output_path: str = OUTPUT_
             .alias("severity")
         )
     else:
-        # Если нет файла справочника, severity тоже 0, так как нет проблем
         processed_df = processed_df.with_columns(pl.lit(0).cast(pl.Int32).alias("severity"))
     
     print("Этап 4: Обработка пустых значений и форматов...")
     
-    # 4.1. Обработка времени в datetime (если пусто — ставим 1970-01-01)
     time_col = "Время с начала создания инцидента до окончания"
     if time_col in processed_df.columns:
         dtype_str = str(processed_df.schema[time_col]).lower()
@@ -88,32 +81,25 @@ def run_fast_processing(input_path: str = INPUT_FILE, output_path: str = OUTPUT_
                 .fill_null(datetime(1970, 1, 1))
             )
             
-    # 4.2. Обработка абсолютно всех остальных колонок файла
-    # Исключаем из массовой обработки колонку времени и созданные признаки
     excluded_cols = [time_col, "is_problem", "severity"]
     other_cols = [col for col in processed_df.columns if col not in excluded_cols]
     
     if other_cols:
         print(f"Заполнение пустых ячеек в остальных колонках ({len(other_cols)} шт.) значением 'Не известно'...")
 
-        # Разделим колонки по типу: Duration и всё остальное
         dur_cols = [c for c in other_cols if processed_df.schema[c] == pl.Duration]
         str_cols = [c for c in other_cols if c not in dur_cols]
-
-        # 1. Обработка Duration-колонок
         if dur_cols:
             processed_df = processed_df.with_columns([
                 pl.when(pl.col(c).is_null())
                 .then(pl.lit("Не известно"))
                 .otherwise(
-                    # Превращаем Duration в миллисекунды → строку
                     pl.col(c).dt.total_milliseconds().cast(pl.String)
                 )
                 .alias(c)
                 for c in dur_cols
             ])
 
-        # 2. Обработка всех остальных колонок
         if str_cols:
             processed_df = processed_df.with_columns([
                 pl.when(pl.col(c).is_null() | (pl.col(c).cast(pl.String) == ""))
