@@ -1,89 +1,64 @@
 import json
-
 from src.llm.llama_client import generate
+import re
 
 
 def classify_batch(batch):
-
     llm_input = []
-
+    
     for row in batch:
-
         llm_input.append({
             "incident_id": row["incident_id"],
             "group": str(row.get("Группа тем", "")),
             "topic": str(row.get("Тема", "")),
-            "text": str(row.get("Текст инцидента", ""))
+            "text": str(row.get("Текст инцидента", ""))[:100]
         })
+    
+    prompt = f"""Анализ обращений. Поля: group, topic, text.
 
-    prompt = f"""
-Ты аналитик муниципальных инцидентов.
+Severity:
+1 - благодарность/вопрос/не проблема
+2 - мелкое неудобство (мусор, трава, скамейки)
+3 - проблема для групп (дороги, школы, транспорт)
+4 - серьёзное (отключение воды/тепла, прорыв, больницы)
+5 - критическое (угроза жизни, авария при морозе, отопление зимой)
 
-Каждая запись содержит:
+Признаки проблемы: жалоба, "не чистят", "авария", "отключили", сарказм.
 
-group - группа тем
-topic - тема
-text - текст обращения
-
-Используй ВСЕ поля одновременно.
-
-Определи:
-1. is_problem
-0 - проблема отсутствует
-1 - проблема присутствует
-
-2. severity
-1 - благодарность, предложение или отсутствие проблемы
-2 - локальное неудобство
-3 - проблема для группы жителей
-4 - серьёзное нарушение городской услуги
-5 - критическая ситуация,
-угроза жизни,
-угроза здоровью,
-либо массовое нарушение услуги
-
-3. problem_tags
-От 2 до 4 кратких тегов.
-Каждый тег:
-- от 2 до 6 слов
-- отражает конкретную проблему
-Примеры хороших тегов:
-нет отопления
-авария на теплотрассе
-не работает светофор
-нехватка мест в школе
-нет продленки для первого класса
-
-Верни ТОЛЬКО JSON.
-Формат ответа:
-
+Пример правильного ответа для двух инцидентов:
 [
-  {{
-    "incident_id": 1,
-    "is_problem": 1,
-    "severity": 4,
-    "problem_tags": [
-      "нет отопления",
-      "авария на теплотрассе"
-    ]
-  }}
+  {{"incident_id": 123, "is_problem": 1, "severity": 3}},
+  {{"incident_id": 124, "is_problem": 0, "severity": 1}}
 ]
 
 Данные:
-
-{json.dumps(llm_input, ensure_ascii=False)}
-"""
+{json.dumps(llm_input, ensure_ascii=False)}"""
 
     print("Отправляем запрос в LLM...")
     response = generate(prompt)
     print("Ответ получен")
 
-    print("Сырой ответ LLM:")
-    print(response[:500])
-
-    try:
-        return json.loads(response)
-    except json.JSONDecodeError as e:
-        print(f"Ошибка парсинга JSON: {e}")
-        print("Первые 200 символов ответа:", response[:200])
-        raise
+    json_match = re.search(r'\[\s*\{.*?\}\s*\]', response, re.DOTALL)
+    
+    if json_match:
+        json_str = json_match.group()
+        try:
+            results = json.loads(json_str)
+            
+            for result in results:
+                if 'severity' not in result:
+                    result['severity'] = 1
+                if 'is_problem' not in result:
+                    result['is_problem'] = 0
+                if 'incident_id' not in result:
+                    result['incident_id'] = 0
+            
+            return results
+        except json.JSONDecodeError as e:
+            print(f"Ошибка парсинга JSON: {e}")
+            print(f"JSON: {json_str[:500]}")
+            return []
+    else:
+        print(f"JSON не найден в ответе")
+        print(f"Ответ: {response[:500]}")
+        return []

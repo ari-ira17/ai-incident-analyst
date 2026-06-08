@@ -45,6 +45,27 @@ class IncidentDataCleaner:
             
         return self
 
+    def filter_incident_types(self):
+        """
+        Оставляет в датасете только инциденты с типами 'Решаемый' и 'Не решаемый'.
+        Игнорирует регистр и лишние пробелы при фильтрации.
+        """
+        if 'Тип инцидента' in self.df.columns:
+            initial_rows = self.df.shape[0]
+            
+            clean_types = self.df['Тип инцидента'].astype(str).str.lower().str.strip()
+            
+            mask = clean_types.isin(['решаемый', 'не решаемый'])
+            self.df = self.df[mask]
+            
+            dropped_rows = initial_rows - self.df.shape[0]
+            if dropped_rows > 0:
+                logging.info(f"Отфильтровано строк по 'Типу инцидента': удалено {dropped_rows} записей.")
+        else:
+            logging.warning("Колонка 'Тип инцидента' не найдена. Фильтрация не выполнена.")
+            
+        return self
+
     def convert_duration_column(self, col_name='Время с начала создания инцидента до окончания'):
         """
         Преобразует указанную колонку в формат timedelta.
@@ -79,4 +100,4 @@ class IncidentDataCleaner:
     def get_dataframe(self) -> pd.DataFrame:
         """Возвращает очищенный датафрейм."""
         return self.df
-       
+    

@@ -8,11 +8,11 @@ from src.llm.batcher import create_batches
 from src.llm.classifier import classify_batch
 
 
-INPUT_FILE = "data/raw/test_40.xlsx"
+INPUT_FILE = "data/raw/тестовый файл.xlsx"
 
-CLEANED_FILE = "data/processed/test_40_cleaned.csv"
+CLEANED_FILE = "data/processed/тестовый_файл_cleaned.csv"
 
-CLASSIFIED_FILE = "data/processed/test_40_classified_qemma.csv"
+CLASSIFIED_FILE = "data/processed/тестовый_файл_classified.csv"
 
 
 def extract_and_clean():
@@ -29,6 +29,7 @@ def extract_and_clean():
         cleaner
         .show_basic_stats()
         .remove_duplicates()
+        .filter_incident_types()
         .convert_duration_column()
         .handle_missing_values()
         .clean_text_formatting()
@@ -66,7 +67,7 @@ def classify_incidents(df):
     all_results = []
 
     for batch_number, batch in enumerate(
-        create_batches(records, batch_size=10),
+        create_batches(records, batch_size=5),
         start=1
     ):
 
