@@ -23,7 +23,7 @@ def main():
     all_problems = []
     
     for batch_number, batch in enumerate(create_batches(records, batch_size=5), start=1):
-        print(f"\nБатч {batch_number} (строк: {len(batch)})")
+        print(f"Батч {batch_number} (строк: {len(batch)})")
         try:
             result = classify_is_problem(batch)
             all_problems.extend(result)
@@ -39,13 +39,11 @@ def main():
     problem_df = pd.DataFrame(all_problems)
     df = df.merge(problem_df, on="incident_id", how="left")
     
-    print("\nЭТАП 2: Определение темы")
-    
-    problem_records = [row for row in records if df.loc[df['incident_id'] == row['incident_id'], 'is_problem'].values[0] == 1]
+    print("\n=ЭТАП 2: Определение темы для ВСЕХ записей\n")
     all_topics = []
     
-    for batch_number, batch in enumerate(create_batches(problem_records, batch_size=5), start=1):
-        print(f"\nБатч {batch_number} (строк: {len(batch)})")
+    for batch_number, batch in enumerate(create_batches(records, batch_size=5), start=1):
+        print(f"Батч {batch_number} (строк: {len(batch)})")
         try:
             result = classify_topic(batch)
             all_topics.extend(result)
@@ -60,13 +58,12 @@ def main():
     
     topic_df = pd.DataFrame(all_topics)
     df = df.merge(topic_df, on="incident_id", how="left")
-    
-    df['topic'] = df['topic'].fillna("")
+    df['topic'] = df['topic'].fillna("Прочее")
     
     df.to_csv(TEMP_TOPICS_FILE, index=False, encoding="utf-8-sig")
     print(f"\nПромежуточный результат сохранён: {TEMP_TOPICS_FILE}")
     
-    print("\nЭТАП 3: Определение отдела")
+    print("\nЭТАП 3: Определение отдела\n")
     add_department_to_csv(TEMP_TOPICS_FILE, FINAL_OUTPUT_FILE)
     print(f"Финальный файл: {FINAL_OUTPUT_FILE}")
 
