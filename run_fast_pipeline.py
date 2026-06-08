@@ -4,15 +4,31 @@ import json
 from datetime import datetime
 
 # Пути относительно корня проекта
-INPUT_FILE = "data/raw/тестовый файл.xlsx" 
-OUTPUT_FILE = "data/processed/тестовый_файл_slow.csv"
+INPUT_FILE = "data/raw/основной файл.xlsx" 
+OUTPUT_FILE = "data/processed/основной_файл_slow.csv"
 RANKS_JSON_FILE = "data/reference/problem_rating.json" 
 
 def run_fast_processing(input_path: str = INPUT_FILE, output_path: str = OUTPUT_FILE):
-    print("Этап 1: Чтение большого файла через Polars (Calamine)...")
-    df = pl.read_excel(input_path, engine="calamine")
+    # Список нужных вам колонок
+    selected_columns = [
+        "Отдел", 
+        "Исполнитель", 
+        "Время с начала создания инцидента до окончания", 
+        "Текущий шаг инцидента", 
+        "Группа тем", 
+        "Тема", 
+        "Муниципалитет", 
+        "Тип инцидента", 
+        "Итог", 
+        "Текст инцидента"
+    ]
     
-    print("Этап 2: Создание колонки is_problem (все исходные столбцы сохранены)...")
+    print("Этап 1: Чтение большого файла через Polars (выборка только нужных колонок)...")
+    # Читаем только указанные столбцы
+    df = pl.read_excel(input_path, engine="calamine", columns=selected_columns)
+    
+    print("Этап 2: Создание колонки is_problem...")
+    # Сначала определяем, является ли инцидент проблемным
     if "Тип инцидента" in df.columns:
         processed_df = df.with_columns(
             pl.when(pl.col("Тип инцидента").is_in(["Решаемый", "Не решаемый"]))
@@ -22,25 +38,30 @@ def run_fast_processing(input_path: str = INPUT_FILE, output_path: str = OUTPUT_
             .alias("is_problem")
         )
     else:
-        print("Предупреждение: Колонка 'Тип инцидента' не найдена.")
         processed_df = df.with_columns(pl.lit(0).cast(pl.Int32).alias("is_problem"))
     
-    print("Этап 3: Добавление колонки severity из JSON...")
-    if "Тема" in processed_df.columns and os.path.exists(RANKS_JSON_FILE):
+    print("Этап 3: Добавление колонки severity (с учетом is_problem)...")
+    if os.path.exists(RANKS_JSON_FILE):
         with open(RANKS_JSON_FILE, "r", encoding="utf-8") as f:
             ranks_dict = json.load(f)
         
-        processed_df = processed_df.with_columns(
+        # Получаем ранг из JSON
+        raw_severity = (
             pl.col("Тема")
             .replace_strict(ranks_dict, default=1)
             .cast(pl.Int32)
+        )
+        
+        # Если is_problem == 1, берем ранг, иначе ставим 0
+        processed_df = processed_df.with_columns(
+            pl.when(pl.col("is_problem") == 1)
+            .then(raw_severity)
+            .otherwise(0)
             .alias("severity")
         )
     else:
-        print(f"Предупреждение: Справочник или колонка 'Тема' не найдены. Установлен дефолт 1.")
-        processed_df = processed_df.with_columns(
-            pl.lit(1).cast(pl.Int32).alias("severity")
-        )
+        # Если нет файла справочника, severity тоже 0, так как нет проблем
+        processed_df = processed_df.with_columns(pl.lit(0).cast(pl.Int32).alias("severity"))
     
     print("Этап 4: Обработка пустых значений и форматов...")
     
