@@ -6,7 +6,6 @@ import pandas as pd
 import sys
 from pathlib import Path
 
-# Импорт функций предобработки файлов
 from run_fast_pipeline import run_fast_processing
 from run_pipeline import run_full_slow_pipeline
 
@@ -17,22 +16,18 @@ from src.core.analytics import IncidentAnalytics
 st.set_page_config(page_title="Analyst | Анализатор инцидентов", layout="wide")
 st.title("📊 Система анализа инцидентов ЖКХ и муниципалитетов")
 
-# ============ КОНФИГУРАЦИЯ ПУТЕЙ ============
 TEMP_RAW_PATH = "data/raw/temp_uploaded.xlsx"
 PROCESSED_CSV_PATH = "data/processed/тестовый_файл_slow.csv"
 OUTPUT_TXT_REPORT = "data/output/report.txt"
 OUTPUT_XLSX_REPORT = "data/output/top_municipalities.xlsx"
 
-# ============ БОКОВАЯ ПАНЕЛЬ ============
 st.sidebar.header("Параметры обработки")
 
-# Проверяем наличие тестовых файлов
 test_file_fast = "data/raw/тестовый файл.xlsx"
 test_file_slow = "data/raw/test_40.xlsx"
 has_test_fast = os.path.exists(test_file_fast)
 has_test_slow = os.path.exists(test_file_slow)
 
-# Опция использования тестовых файлов
 use_test_file = False
 if has_test_fast or has_test_slow:
     st.sidebar.success("✅ Тестовые файлы найдены")
@@ -49,29 +44,25 @@ pipeline_mode = st.sidebar.radio(
 
 execute_button = st.sidebar.button("Запустить анализ", key="analyst_run")
 
-# ============ ОСНОВНОЙ КОНТЕНТ ============
 if use_test_file or uploaded_file is not None:
     os.makedirs(os.path.dirname(TEMP_RAW_PATH), exist_ok=True)
     
     if use_test_file:
-        # Используем тестовые файлы
         if pipeline_mode == "Базовое решение (fast)" and has_test_fast:
             import shutil
             shutil.copy(test_file_fast, TEMP_RAW_PATH)
             st.sidebar.success(f"✅ Используется тестовый файл.xlsx")
         elif pipeline_mode == "AI-решение (slow)" and has_test_slow:
-            # Берём первые 10 строк из test_40.xlsx
             from openpyxl import load_workbook
             import shutil
             
             wb = load_workbook(test_file_slow)
             ws = wb.active
-            ws.delete_rows(11, ws.max_row)  # Удаляем все после 10-й строки
+            ws.delete_rows(11, ws.max_row) 
             os.makedirs(os.path.dirname(TEMP_RAW_PATH), exist_ok=True)
             wb.save(TEMP_RAW_PATH)
             st.sidebar.success(f"✅ Используется small_data.xlsx")
     else:
-        # Используем загруженный файл
         with open(TEMP_RAW_PATH, "wb") as f:
             f.write(uploaded_file.getbuffer())
         
@@ -142,7 +133,6 @@ if use_test_file or uploaded_file is not None:
                 if total > 0:
                     pandas_chart_data["pct"] = pandas_chart_data["count"] / total
 
-                    # Всё, что меньше 5% → "Другое"
                     pandas_chart_data.loc[pandas_chart_data["pct"] < 0.02, "topic"] = "Другое"
 
                     grouped = (
@@ -172,13 +162,10 @@ if use_test_file or uploaded_file is not None:
 
         st.subheader("📊 Топ-10 муниципалитетов по суммарной критичности")
         
-        # Получаем топ-10 регионов
         top_regions_df = st.session_state["analyzer"].get_top_regions(limit=10)
         if not top_regions_df.is_empty():
-            # Конвертируем в pandas для visualizer
             top_regions_pandas = top_regions_df.to_pandas()
             
-            # Создаем горизонтальную bar chart с убыванием
             fig_top = px.bar(
                 top_regions_pandas.sort_values("Суммы баллов", ascending=True),
                 x="Суммы баллов",
