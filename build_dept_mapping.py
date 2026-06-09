@@ -24,13 +24,13 @@ def build_mappings(input_file: str, output_dir: str) -> None:
     df = df.dropna(subset=["Муниципалитет", "Тема", "Отдел"])
     print(f"  Всего строк: {len(df)}")
 
-    # 1. Маппинг для "Омск г.о." 
+    
     omsk_df = df[df["Муниципалитет"] == "Омск г.о."]
     print(f"\n  Омск г.о.: {len(omsk_df)} строк")
 
     omsk_mapping: dict[str, Counter] = defaultdict(Counter)
     for _, row in omsk_df.iterrows():
-        key = f"{row['Тема']}"  # только тема
+        key = f"{row['Тема']}" 
         omsk_mapping[key][row["Отдел"]] += 1
 
     omsk_final: dict[str, str] = {}
@@ -44,7 +44,7 @@ def build_mappings(input_file: str, output_dir: str) -> None:
         json.dump(omsk_final, f, ensure_ascii=False, indent=2)
     print(f"    Сохранено {len(omsk_final)} тем → {omsk_output}")
 
-    # Маппинг для "Омская область, другое" 
+   
     region_df = df[df["Муниципалитет"] == "Омская область, другое"]
     print(f"\n  Омская область, другое: {len(region_df)} строк")
 
