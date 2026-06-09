@@ -76,7 +76,6 @@ if use_test_file or uploaded_file is not None:
             df_processed = pl.read_csv(PROCESSED_CSV_PATH)
             analytics = IncidentAnalytics(df_processed)
             
-            # ИСПРАВЛЕНО: имя аргумента изменено на docx_output_path
             top_regions = analytics.build_reports(
                 docx_output_path=OUTPUT_TXT_REPORT,
                 xlsx_output_path=OUTPUT_XLSX_REPORT
