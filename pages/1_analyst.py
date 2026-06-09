@@ -18,7 +18,7 @@ st.title("📊 Система анализа инцидентов ЖКХ и му
 
 TEMP_RAW_PATH = "data/raw/temp_uploaded.xlsx"
 PROCESSED_CSV_PATH = "data/processed/тестовый_файл_slow.csv"
-OUTPUT_TXT_REPORT = "data/output/report.txt"
+OUTPUT_TXT_REPORT = "data/output/report.docx"
 OUTPUT_XLSX_REPORT = "data/output/top_municipalities.xlsx"
 
 st.sidebar.header("Параметры обработки")
@@ -76,8 +76,9 @@ if use_test_file or uploaded_file is not None:
             df_processed = pl.read_csv(PROCESSED_CSV_PATH)
             analytics = IncidentAnalytics(df_processed)
             
+            # ИСПРАВЛЕНО: имя аргумента изменено на docx_output_path
             top_regions = analytics.build_reports(
-                txt_output_path=OUTPUT_TXT_REPORT,
+                docx_output_path=OUTPUT_TXT_REPORT,
                 xlsx_output_path=OUTPUT_XLSX_REPORT
             )
             
@@ -92,12 +93,12 @@ if use_test_file or uploaded_file is not None:
         
         col1, col2 = st.columns(2)
         with col1:
-            with open(OUTPUT_TXT_REPORT, "r", encoding="utf-8") as f:
+            with open(OUTPUT_TXT_REPORT, "rb") as f:
                 st.download_button(
-                    label="Скачать текстовый отчет (Ollama AI) .txt",
+                    label="Скачать текстовый отчет (Ollama AI) .docx",
                     data=f.read(),
-                    file_name="Аналитический_отчет.txt",
-                    mime="text/plain"
+                    file_name="Аналитический_отчет.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
         with col2:
             with open(OUTPUT_XLSX_REPORT, "rb") as f:
@@ -186,3 +187,4 @@ if use_test_file or uploaded_file is not None:
         st.divider()
 else:
     st.info("Пожалуйста, загрузите входной файл формата .xlsx в боковую панель для начала работы или используйте тестовые файлы.")
+    
