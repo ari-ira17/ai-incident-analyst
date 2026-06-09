@@ -16,10 +16,8 @@ from src.workspace import render_workspace_panel, init_workspace, get_workspace,
 st.set_page_config(page_title="Generator | Анализатор инцидентов", layout="wide")
 st.title("✉️ Генератор ответов на обращения")
 
-# ============ ИНИЦИАЛИЗАЦИЯ WORKSPACE ============
 init_workspace()
 
-# Основной контент (слева) и workspace (справа)
 left_col, right_col = st.columns([3, 1])
 
 with right_col:
@@ -106,7 +104,6 @@ with left_col:
     Черновик ответа (на русском):"""
         return prompt
 
-    # ============ ОСНОВНОЙ КОНТЕНТ ============
     st.write("Генерация персонализированных черновиков ответов на обращения граждан с использованием LLM")
 
     ws = get_workspace()
