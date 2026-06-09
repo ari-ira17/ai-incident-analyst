@@ -57,7 +57,7 @@ def prepare_classifier_data(df: pd.DataFrame) -> pd.DataFrame:
         return None
     
     # Добавляем недостающие столбцы с пустыми значениями
-    required_cols = ["Отдел", "Тема", "Муниципалитет", "Тип инцидента"]
+    required_cols = ["Отдел", "Тема", "Муниципалитет", "Тип инцидента", "Улица"]
     for col in required_cols:
         if col not in result_df.columns:
             result_df[col] = ""
