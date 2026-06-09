@@ -9,10 +9,8 @@ import streamlit as st
 import polars as pl
 from pathlib import Path
 
-# __file__ = src/map_utils/session_store.py -> parent = src/map_utils -> parent = src -> parent = project root
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
-# Ключи для session_state
 _STATE_KEY = "map_processed_data"
 _SOURCE_KEY = "map_source_name"
 _LOADED_KEY = "map_data_loaded"
@@ -58,7 +56,6 @@ def render_sidebar_upload() -> tuple[pl.DataFrame | None, str, str]:
             st.sidebar.error(f"❌ Ошибка загрузки: {e}")
             return None, "", ""
 
-    # Если данных нет, но есть processed файл от аналитика
     processed_path = os.path.join(PROJECT_ROOT, "data/processed/тестовый_файл_slow.xlsx")
     if os.path.exists(processed_path):
         if st.sidebar.button("📂 Использовать последние обработанные данные", key="map_use_processed"):
