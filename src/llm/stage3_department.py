@@ -44,7 +44,7 @@ def get_department(municipality: str, topic: str) -> str:
         return region_mapping.get(topic, "Администрация Омской области")
     
     if municipality and "район" in municipality.lower():
-        return f"Администрация {municipality}"
+        return f"{municipality}"
     
     return "Администрация города Омска"
 
