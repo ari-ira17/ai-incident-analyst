@@ -104,10 +104,8 @@ with col_test:
             key="test_txt_btn" 
         )
     else:
-        # ДОБАВЛЕН КЛЮЧ ЗДЕСЬ
         st.button("📄 Текстовый отчет недоступен", disabled=True, use_container_width=True, key="test_txt_disabled")
 
-    # Кнопка для Excel отчета (тест)
     file_data_xlsx = load_file_for_download(PATHS["test_xlsx"])
     if file_data_xlsx:
         st.download_button(
