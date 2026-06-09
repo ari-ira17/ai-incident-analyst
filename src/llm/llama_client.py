@@ -11,11 +11,11 @@ import time
 OLLAMA_URL = "http://localhost:11434/api/generate"
 MODEL_NAME = "qwen2.5:7b"
 
-# Параметры по умолчанию (оптимизированные для вашего железа)
+# Параметры по умолчанию
 DEFAULT_OPTIONS = {
     "num_predict": 256,
     "temperature": 0.1,
-    "num_ctx": 14000,      # безопасное значение для 4GB GPU
+    "num_ctx": 14000,     
     "num_thread": 4,
     "top_k": 40,
     "top_p": 0.9,
