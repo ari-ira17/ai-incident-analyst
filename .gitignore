@@ -218,3 +218,11 @@ __marimo__/
 .streamlit/secrets.toml
 
 /data
+  
+# Model checkpoint files - too large for git  
+admin_response_model/  
+admin_response_model_final/  
+*.safetensors  
+*.pt  
+*.bin  
+*.pth 

@@ -1,23 +1,35 @@
+"""
+pages/3_generator.py
+────────────────────
+Страница генератора ответов. Использует единое хранилище данных из session_store.
+"""
+
 import streamlit as st
 import os
 import pandas as pd
 import re
-import time
 import sys
 from pathlib import Path
 from openpyxl import load_workbook
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent   
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.llm.llama_client import generate
 
+from src.session_store import (
+    get_raw_data, is_data_loaded, get_source_name,
+    render_sidebar_upload,
+    TEMP_UPLOAD_PATH,
+)
+
 st.set_page_config(page_title="Generator | Анализатор инцидентов", layout="wide")
 st.title("✉️ Генератор ответов на обращения")
 
-LLM_INPUT_FILE = "data/raw/generator_input.xlsx"
+# ─── Единая боковая панель загрузки ──────────────────────────────────────────
+df_loaded, src_name, pipe_mode = render_sidebar_upload()
+
 LLM_OUTPUT_FILE = "data/processed/llm_responses.csv"
-DEFAULT_TEST_FILE = "data/raw/text_classifier_data.xlsx"
 
 TEMPLATE_EXAMPLES = """
 Пример 1:
@@ -58,7 +70,7 @@ def clean_text(text):
     return text.strip()
 
 def remove_non_russian(text):
-    """Удаляет не-русские символы (иероглифы, иероглифы и т.д.)"""
+    """Удаляет не-русские символы"""
     if not isinstance(text, str):
         return text
     text = re.sub(r'[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]', '', text)
@@ -97,116 +109,98 @@ def build_prompt(complaint_text, topic_group, subtopic, department, municipality
 Черновик ответа (на русском):"""
     return prompt
 
-st.sidebar.header("Загрузка данных")
+# ============ ПРОВЕРКА ДАННЫХ ============
+if not is_data_loaded() or df_loaded is None:
+    st.info("⬅️ Загрузите .xlsx файл через боковую панель")
+    st.stop()
 
-use_default = False
-if os.path.exists(DEFAULT_TEST_FILE):
-    st.sidebar.success("✅ Файл для тестирования найден")
-    use_default = st.sidebar.checkbox("Использовать файл для тестирования", value=True)
+st.success(f"✅ Данные загружены: {get_source_name()}")
+st.write(f"📊 Записей: {len(df_loaded)}, колонок: {len(df_loaded.columns)}")
 
-if not use_default:
-    uploaded_file = st.sidebar.file_uploader("Загрузите свой файл (.xlsx)", type=["xlsx"], key="generator_upload")
-    if uploaded_file is not None:
-        os.makedirs(os.path.dirname(LLM_INPUT_FILE), exist_ok=True)
-        with open(LLM_INPUT_FILE, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        st.sidebar.success("✅ Файл загружен")
-else:
-    uploaded_file = True
-    st.sidebar.info("Используется файл для тестирования")
-
+st.divider()
 st.write("Генерация персонализированных черновиков ответов на обращения граждан с использованием LLM")
+st.divider()
 
-if st.button("▶️ Запустить генерацию", key="generator_run"):
-    if not uploaded_file:
-        st.error("❌ Пожалуйста, сначала загрузите файл!")
-    else:
-        try:
-            st.info("⏳ Загрузка данных...")
-            
-            if use_default:
-                input_file_path = DEFAULT_TEST_FILE
-            else:
-                input_file_path = LLM_INPUT_FILE
-            
-            df = load_excel_simple(input_file_path)
-            df_test = df.head(5).copy()
-            
-            st.success("✅ Данные загружены")
-            
-            st.subheader("📋 Полный тестовый датасет")
-            st.dataframe(df_test, use_container_width=True)
+if st.button("▶️ Запустить генерацию", key="generator_run", type="primary"):
+    try:
+        st.info("⏳ Загрузка данных...")
         
-            df_test["Текст инцидента"] = df_test["Текст инцидента"].apply(clean_text)
-            df_test["Группа тем"] = df_test["Группа тем"].fillna("Общее") if "Группа тем" in df_test.columns else "Общее"
-            df_test["Тема"] = df_test["Тема"].fillna("Обращение") if "Тема" in df_test.columns else "Обращение"
-            df_test["Отдел"] = df_test["Отдел"].fillna("Администрация") if "Отдел" in df_test.columns else "Администрация"
-            df_test["Муниципалитет"] = df_test["Муниципалитет"].fillna("Омская область") if "Муниципалитет" in df_test.columns else "Омская область"
+        df = load_excel_simple(str(TEMP_UPLOAD_PATH))
+        df_test = df.head(5).copy()
+        
+        st.success("✅ Данные загружены")
+        
+        st.subheader("📋 Полный тестовый датасет")
+        st.dataframe(df_test, use_container_width=True)
+    
+        df_test["Текст инцидента"] = df_test["Текст инцидента"].apply(clean_text)
+        df_test["Группа тем"] = df_test["Группа тем"].fillna("Общее") if "Группа тем" in df_test.columns else "Общее"
+        df_test["Тема"] = df_test["Тема"].fillna("Обращение") if "Тема" in df_test.columns else "Обращение"
+        df_test["Отдел"] = df_test["Отдел"].fillna("Администрация") if "Отдел" in df_test.columns else "Администрация"
+        df_test["Муниципалитет"] = df_test["Муниципалитет"].fillna("Омская область") if "Муниципалитет" in df_test.columns else "Омская область"
+        
+        
+        st.info("⏳ Генерация ответов (это может занять время)...")
+        results = []
+        progress_bar = st.progress(0)
+        
+        for idx, (_, row) in enumerate(df_test.iterrows()):
+            progress = (idx + 1) / len(df_test)
+            progress_bar.progress(progress)
             
+            complaint = str(row["Текст инцидента"])
+            topic = str(row.get("Группа тем", "Общее"))
+            subtopic = str(row.get("Тема", "Обращение"))
+            dept = str(row.get("Отдел", "Администрация"))
+            municipality = str(row.get("Муниципалитет", "Омская область"))
             
-            st.info("⏳ Генерация ответов (это может занять время)...")
-            results = []
-            progress_bar = st.progress(0)
+            real_response = str(row.get("1ый ответ ПИ", ""))
+            if pd.isna(real_response) or real_response == "nan":
+                real_response = ""
+            real_response = clean_text(real_response)
             
-            for idx, (_, row) in enumerate(df_test.iterrows()):
-                progress = (idx + 1) / len(df_test)
-                progress_bar.progress(progress)
-                
-                complaint = str(row["Текст инцидента"])
-                topic = str(row.get("Группа тем", "Общее"))
-                subtopic = str(row.get("Тема", "Обращение"))
-                dept = str(row.get("Отдел", "Администрация"))
-                municipality = str(row.get("Муниципалитет", "Омская область"))
-                
-                real_response = str(row.get("1ый ответ ПИ", ""))
-                if pd.isna(real_response) or real_response == "nan":
-                    real_response = ""
-                real_response = clean_text(real_response)
-                
-                try:
-                    prompt = build_prompt(complaint, topic, subtopic, dept, municipality)
-                    response = generate(prompt=prompt)
-                    response = remove_non_russian(response.strip())
-                except Exception as e:
-                    response = f"[Ошибка генерации: {e}]"
-                    st.warning(f"⚠️ Ошибка на строке {idx + 1}: {e}")
-                
-                results.append({
-                    "id": idx,
-                    "complaint": complaint[:300],
-                    "generated_response": response,
-                    "real_response": real_response
-                })
+            try:
+                prompt = build_prompt(complaint, topic, subtopic, dept, municipality)
+                response = generate(prompt=prompt)
+                response = remove_non_russian(response.strip())
+            except Exception as e:
+                response = f"[Ошибка генерации: {e}]"
+                st.warning(f"⚠️ Ошибка на строке {idx + 1}: {e}")
             
-            results_df = pd.DataFrame(results)
-            
-            if "real_response" in results_df.columns:
-                results_df = results_df.drop(columns=["real_response"])
-            elif "id" in results_df.columns:
-                results_df = results_df.drop(columns=["id"])
+            results.append({
+                "id": idx,
+                "complaint": complaint[:300],
+                "generated_response": response,
+                "real_response": real_response
+            })
+        
+        results_df = pd.DataFrame(results)
+        
+        if "real_response" in results_df.columns:
+            results_df = results_df.drop(columns=["real_response"])
+        elif "id" in results_df.columns:
+            results_df = results_df.drop(columns=["id"])
 
+        os.makedirs(os.path.dirname(LLM_OUTPUT_FILE), exist_ok=True)
+        results_df.to_csv(LLM_OUTPUT_FILE, index=False, encoding='utf-8-sig')
+        
+        st.success("🎉 Генерация успешно завершена!")
+        if "id" in df.columns:
+            df = df.drop(columns=["id"])
 
+        if os.path.exists(LLM_OUTPUT_FILE):
+            with open(LLM_OUTPUT_FILE, "rb") as f:
+                st.download_button(
+                    label="📥 Скачать результаты генерации (llm_responses.csv)",
+                    data=f.read(),
+                    file_name="llm_responses.csv",
+                    mime="text/csv"
+                )
             
-            os.makedirs(os.path.dirname(LLM_OUTPUT_FILE), exist_ok=True)
-            results_df.to_csv(LLM_OUTPUT_FILE, index=False, encoding='utf-8-sig')
-            
-            st.success("🎉 Генерация успешно завершена!")
-            if "id" in df.columns:
-                df = df.drop(columns=["id"])
-
-            if os.path.exists(LLM_OUTPUT_FILE):
-                with open(LLM_OUTPUT_FILE, "rb") as f:
-                    st.download_button(
-                        label="📥 Скачать результаты генерации (llm_responses.csv)",
-                        data=f.read(),
-                        file_name="llm_responses.csv",
-                        mime="text/csv"
-                    )
+            st.subheader("📋 Превью результатов")
+            st.dataframe(results_df, use_container_width=True)
                 
-                st.subheader("📋 Превью результатов")
-                st.dataframe(results_df, use_container_width=True)
-                    
-        except Exception as e:
-            st.error(f"❌ Критическая ошибка: {e}")
-            import traceback
-            st.text(traceback.format_exc())
+    except Exception as e:
+        st.error(f"❌ Критическая ошибка: {e}")
+        import traceback
+        st.text(traceback.format_exc())
