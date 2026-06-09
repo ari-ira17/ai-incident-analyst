@@ -3,8 +3,8 @@ import os
 import json
 from datetime import datetime
 
-INPUT_FILE = "data/raw/основной файл.xlsx" 
-OUTPUT_FILE = "data/processed/основной_файл_slow.csv"
+INPUT_FILE = "data/raw/основной файл.xlsx"
+OUTPUT_FILE = "data/processed/основной_файл_slow.xlsx"
 RANKS_JSON_FILE = "data/reference/problem_rating.json" 
 
 def run_fast_processing(input_path: str = INPUT_FILE, output_path: str = OUTPUT_FILE):
@@ -109,10 +109,10 @@ def run_fast_processing(input_path: str = INPUT_FILE, output_path: str = OUTPUT_
                 for c in str_cols
             ])
     
-    print("Этап 5: Сохранение результата в единый CSV...")
+    print("Этап 5: Сохранение результата в XLSX...")
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     
-    processed_df.write_csv(output_path, include_header=True)
+    processed_df.write_excel(output_path, include_header=True)
     print(f"Работа окончена. Все исходные колонки и новые признаки сохранены в: {output_path}")
     
     return output_path

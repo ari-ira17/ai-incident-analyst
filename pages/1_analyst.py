@@ -17,7 +17,7 @@ st.set_page_config(page_title="Analyst | Анализатор инциденто
 st.title("📊 Система анализа инцидентов ЖКХ и муниципалитетов")
 
 TEMP_RAW_PATH = "data/raw/temp_uploaded.xlsx"
-PROCESSED_CSV_PATH = "data/processed/тестовый_файл_slow.csv"
+PROCESSED_XLSX_PATH = "data/processed/тестовый_файл_slow.xlsx"
 OUTPUT_TXT_REPORT = "data/output/report.txt"
 OUTPUT_XLSX_REPORT = "data/output/top_municipalities.xlsx"
 
@@ -69,11 +69,11 @@ if use_test_file or uploaded_file is not None:
     if execute_button:
         with st.spinner("Выполняется предобработка данных, расчет метрик и генерация отчетов..."):
             if pipeline_mode == "Базовое решение (fast)":
-                run_fast_processing(input_path=TEMP_RAW_PATH, output_path=PROCESSED_CSV_PATH)
+                run_fast_processing(input_path=TEMP_RAW_PATH, output_path=PROCESSED_XLSX_PATH)
             else:
-                run_full_slow_pipeline(TEMP_RAW_PATH, PROCESSED_CSV_PATH)
+                run_full_slow_pipeline(TEMP_RAW_PATH, PROCESSED_XLSX_PATH)
                 
-            df_processed = pl.read_csv(PROCESSED_CSV_PATH)
+            df_processed = pl.read_excel(PROCESSED_XLSX_PATH, engine="calamine")
             analytics = IncidentAnalytics(df_processed)
             
             top_regions = analytics.build_reports(
@@ -90,7 +90,7 @@ if use_test_file or uploaded_file is not None:
     if st.session_state.get("processing_done"):
         st.subheader("Скачать результаты анализа")
         
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         with col1:
             with open(OUTPUT_TXT_REPORT, "r", encoding="utf-8") as f:
                 st.download_button(
@@ -107,6 +107,15 @@ if use_test_file or uploaded_file is not None:
                     file_name="Рейтинг_муниципалитетов.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
+        with col3:
+            if os.path.exists(PROCESSED_XLSX_PATH):
+                with open(PROCESSED_XLSX_PATH, "rb") as f:
+                    st.download_button(
+                        label="Скачать обработанные данные .xlsx",
+                        data=f.read(),
+                        file_name="Обработанные_данные.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
         
         st.divider()
         
