@@ -72,7 +72,6 @@ def _add_district_polygons(m: folium.Map):
     if geojson_data is None:
         return
 
-    # Центры районов для подписей
     district_centers = {
         "Кировский": [54.960, 73.310],
         "Ленинский": [54.920, 73.350],
@@ -98,7 +97,6 @@ def _add_district_polygons(m: folium.Map):
         ),
     ).add_to(m)
 
-    # Подписи названий районов
     for name, coords in district_centers.items():
         color = DISTRICT_COLORS.get(name, "#333333")
         folium.Marker(
@@ -129,19 +127,16 @@ def build_incident_map(
     """
     m = folium.Map(location=[54.989, 73.368], zoom_start=12, tiles="OpenStreetMap")
 
-    # Стилизованные полигоны районов
     _add_district_polygons(m)
 
     if incidents_df.is_empty():
         return m
 
-    # Фильтрация по severity
     df = incidents_df.filter(pl.col("severity") >= min_severity)
 
     if df.is_empty():
         return m
 
-    # Матчим улицы и собираем точки
     points = []
     for row in df.iter_rows(named=True):
         raw_street = str(row.get("Улица", "") or "")
@@ -157,7 +152,6 @@ def build_incident_map(
         district = coords.get("district", "Неизвестно")
         source = coords.get("source", "nominatim")
 
-        # Фильтрация по району (из ответа API)
         if district_filter and district != district_filter:
             continue
 
@@ -188,7 +182,6 @@ def build_incident_map(
 
         points.append([lat, lon, severity])
 
-    # Слой тепловой карты
     if points:
         HeatMap(
             data=[[p[0], p[1], p[2]] for p in points],
@@ -224,7 +217,6 @@ def get_district_stats(df: pl.DataFrame, streets_mapping: dict = None, use_geoco
         topic = str(row.get("Тема", "") or "Без темы")
         stats[district]["topics"][topic] = stats[district]["topics"].get(topic, 0) + 1
 
-    # Сортировка тем и средняя опасность
     for d in stats:
         sevs = stats[d]["severities"]
         stats[d]["avg_severity"] = round(sum(sevs) / len(sevs), 1) if sevs else 0
