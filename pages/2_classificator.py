@@ -8,10 +8,10 @@ import json
 from pathlib import Path
 from openpyxl import load_workbook
 
-# Импорт функций предобработки файлов
+
 from run_pipeline import extract_and_clean
 
-# Импорт LLM классификатора
+
 from src.llm.batcher import create_batches
 from src.llm.stage1_is_problem import classify_is_problem
 from src.llm.stage2_topic import classify_topic
@@ -24,13 +24,13 @@ sys.path.insert(0, str(PROJECT_ROOT))
 st.set_page_config(page_title="Classificator | Анализатор инцидентов", layout="wide")
 st.title("🤖 LLM Классификатор инцидентов")
 
-# ============ КОНФИГУРАЦИЯ ПУТЕЙ ============
+
 LLM_INPUT_FILE = "data/raw/llm_input.xlsx"
 LLM_TEMP_TOPICS_FILE = "data/processed/temp_topics.csv"
 LLM_FINAL_OUTPUT_FILE = "data/processed/final_predictions.csv"
 DEFAULT_TEST_FILE = "data/raw/text_classifier_data.xlsx"
 
-# ============ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ============
+
 def load_excel_simple(file_path: str) -> pd.DataFrame:
     """Загружает Excel файл с любой структурой столбцов"""
     wb = load_workbook(file_path, read_only=True)
@@ -48,25 +48,25 @@ def prepare_classifier_data(df: pd.DataFrame) -> pd.DataFrame:
     Преобразует датасет в формат, совместимый с LLM классификатором.
     Если есть только "Текст инцидента", добавляет необходимые столбцы.
     """
-    # Копируем исходный датасет
+    
     result_df = df.copy()
     
-    # Проверяем наличие столбца "Текст инцидента"
+    
     if "Текст инцидента" not in result_df.columns:
         st.error("❌ Датасет должен содержать столбец 'Текст инцидента'")
         return None
     
-    # Добавляем недостающие столбцы с пустыми значениями
+    
     required_cols = ["Отдел", "Тема", "Муниципалитет", "Тип инцидента"]
     for col in required_cols:
         if col not in result_df.columns:
             result_df[col] = ""
     
-    # Добавляем ID если нет
+    
     if "incident_id" not in result_df.columns:
         result_df["incident_id"] = range(len(result_df))
     
-    # Очищаем текст (удаляем пропуски, нормализуем)
+   
     result_df["Текст инцидента"] = result_df["Текст инцидента"].fillna("").astype(str).str.strip()
     
     return result_df
@@ -90,10 +90,10 @@ def safe_parse_llm_result(result):
     
     return []
 
-# ============ БОКОВАЯ ПАНЕЛЬ ============
+
 st.sidebar.header("Загрузка данных")
 
-# Проверяем наличие файла для тестирования
+
 use_default = False
 if os.path.exists(DEFAULT_TEST_FILE):
     st.sidebar.success("✅ Файл для тестирования найден")
@@ -107,10 +107,10 @@ if not use_default:
             f.write(uploaded_file.getbuffer())
         st.sidebar.success("✅ Файл загружен")
 else:
-    uploaded_file = True  # Флаг для использования стандартного файла
+    uploaded_file = True 
     st.sidebar.info("Используется файл для тестирования")
 
-# ============ ОСНОВНОЙ КОНТЕНТ ============
+
 st.write("Многоэтапная LLM-классификация инцидентов:")
 st.write("1. **Этап 1** — определение is_problem")
 st.write("2. **Этап 2** — определение topic")
