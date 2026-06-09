@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+import json
 
 from src.ingestion.excel_reader import read_excel
 from src.ingestion.csv_exporter import save_to_csv
@@ -13,7 +14,9 @@ INPUT_FILE = "data/raw/test_40.xlsx"
 
 CLEANED_FILE = "data/processed/test_40_cleaned.csv"
 
-CLASSIFIED_FILE = "data/processed/test_40_classified.csv"
+CLASSIFIED_FILE = "data/processed/test_40_classified.xlsx"
+
+RANKS_JSON_FILE = "data/reference/problem_rating.json"
 
 
 def extract_and_clean():
@@ -115,12 +118,12 @@ def main():
     print("Pipeline завершён")
 
 
-def run_full_slow_pipeline(input_excel: str, output_csv: str):
+def run_full_slow_pipeline(input_excel: str, output_xlsx: str):
     """
     Выполняет медленный пайплайн:
     1. Чтение, очистка, сохранение очищенных данных (промежуточно).
     2. Классификация батчами.
-    3. Сохранение итогового классифицированного CSV в output_csv.
+    3. Сохранение итогового классифицированного XLSX в output_xlsx.
     """
     raw_data = read_excel(input_excel)
     df = pd.DataFrame(raw_data)
@@ -150,9 +153,21 @@ def run_full_slow_pipeline(input_excel: str, output_csv: str):
     result_df = pd.DataFrame(all_results)
     final_df = df2.merge(result_df, on="incident_id", how="left")
 
-    os.makedirs(os.path.dirname(output_csv), exist_ok=True)
-    final_df.to_csv(output_csv, index=False, encoding="utf-8-sig")
-    print(f"Итоговый файл сохранён: {output_csv}")
+    # Проставляем severity из problem_rating.json по теме
+    if os.path.exists(RANKS_JSON_FILE):
+        with open(RANKS_JSON_FILE, encoding="utf-8") as f:
+            ranks_dict = json.load(f)
+        final_df["severity"] = final_df.apply(
+            lambda row: ranks_dict.get(str(row.get("topic", "")), 1) if row.get("is_problem", 0) == 1 else 0,
+            axis=1
+        )
+    else:
+        if "severity" not in final_df.columns:
+            final_df["severity"] = 0
+
+    os.makedirs(os.path.dirname(output_xlsx), exist_ok=True)
+    final_df.to_excel(output_xlsx, index=False)
+    print(f"Итоговый файл сохранён: {output_xlsx}")
 
 if __name__ == "__main__":
     run_full_slow_pipeline(INPUT_FILE, CLASSIFIED_FILE)

@@ -27,7 +27,8 @@ st.title("🤖 LLM Классификатор инцидентов")
 # ============ КОНФИГУРАЦИЯ ПУТЕЙ ============
 LLM_INPUT_FILE = "data/raw/llm_input.xlsx"
 LLM_TEMP_TOPICS_FILE = "data/processed/temp_topics.csv"
-LLM_FINAL_OUTPUT_FILE = "data/processed/final_predictions.csv"
+LLM_FINAL_OUTPUT_CSV = "data/processed/final_predictions.csv"
+LLM_FINAL_OUTPUT_FILE = "data/processed/final_predictions.xlsx"
 DEFAULT_TEST_FILE = "data/raw/text_classifier_data.xlsx"
 
 # ============ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ============
@@ -140,7 +141,7 @@ if st.button("▶️ Запустить классификацию", key="classi
             st.subheader("📋 Полный тестовый датасет")
             st.dataframe(df[["Текст инцидента"]], use_container_width=True)
 
-            df_for_records = df.head(9).copy()
+            df_for_records = df.head(20).copy()
             if "incident_id" not in df_for_records.columns:
                 df_for_records["incident_id"] = range(len(df_for_records))
             records = df_for_records.to_dict(orient="records")
@@ -224,25 +225,28 @@ if st.button("▶️ Запустить классификацию", key="classi
             os.makedirs(os.path.dirname(LLM_TEMP_TOPICS_FILE), exist_ok=True)
             df_merged.to_csv(LLM_TEMP_TOPICS_FILE, index=False, encoding="utf-8-sig")
             
-            add_department_to_csv(LLM_TEMP_TOPICS_FILE, LLM_FINAL_OUTPUT_FILE)
+            add_department_to_csv(LLM_TEMP_TOPICS_FILE, LLM_FINAL_OUTPUT_CSV)
+            
+            result_df = pd.read_csv(LLM_FINAL_OUTPUT_CSV)
+            with pd.ExcelWriter(LLM_FINAL_OUTPUT_FILE, engine="openpyxl") as writer:
+                result_df.to_excel(writer, sheet_name="Результаты", index=False)
             
             st.success("🎉 Классификация успешно завершена!")
             
             if os.path.exists(LLM_FINAL_OUTPUT_FILE):
-                result_df = pd.read_csv(LLM_FINAL_OUTPUT_FILE)
+                result_df = pd.read_excel(LLM_FINAL_OUTPUT_FILE)
                 
                 output_columns = ["Текст инцидента", "is_problem", "topic", "department"]
                 available_columns = [col for col in output_columns if col in result_df.columns]
                 result_df_output = result_df[available_columns]
                 
-                csv_data = result_df_output.to_csv(index=False, encoding="utf-8-sig")
-                
-                st.download_button(
-                    label="📥 Скачать результаты классификации (final_predictions.csv)",
-                    data=csv_data,
-                    file_name="final_predictions.csv",
-                    mime="text/csv"
-                )
+                with open(LLM_FINAL_OUTPUT_FILE, "rb") as f:
+                    st.download_button(
+                        label="📥 Скачать результаты классификации (final_predictions.xlsx)",
+                        data=f.read(),
+                        file_name="final_predictions.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
                 
                 st.subheader("📋 Превью результатов")
                 st.dataframe(result_df_output, use_container_width=True)
