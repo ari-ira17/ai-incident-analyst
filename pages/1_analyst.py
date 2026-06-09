@@ -18,7 +18,7 @@ st.title("📊 Система анализа инцидентов ЖКХ и му
 
 TEMP_RAW_PATH = "data/raw/temp_uploaded.xlsx"
 PROCESSED_CSV_PATH = "data/processed/тестовый_файл_slow.csv"
-OUTPUT_TXT_REPORT = "data/output/report.txt"
+OUTPUT_DOCX_REPORT = "data/output/report.docx"
 OUTPUT_XLSX_REPORT = "data/output/top_municipalities.xlsx"
 
 st.sidebar.header("Параметры обработки")
@@ -77,7 +77,7 @@ if use_test_file or uploaded_file is not None:
             analytics = IncidentAnalytics(df_processed)
             
             top_regions = analytics.build_reports(
-                txt_output_path=OUTPUT_TXT_REPORT,
+                docx_output_path=OUTPUT_DOCX_REPORT,
                 xlsx_output_path=OUTPUT_XLSX_REPORT
             )
             
@@ -92,17 +92,18 @@ if use_test_file or uploaded_file is not None:
         
         col1, col2 = st.columns(2)
         with col1:
-            with open(OUTPUT_TXT_REPORT, "r", encoding="utf-8") as f:
+            # Читаем Word-файл как бинарник ("rb")
+            with open(OUTPUT_DOCX_REPORT, "rb") as f:
                 st.download_button(
-                    label="Скачать текстовый отчет (Ollama AI) .txt",
+                    label="📥 Скачать аналитический отчет (Ollama AI) .docx",
                     data=f.read(),
-                    file_name="Аналитический_отчет.txt",
-                    mime="text/plain"
+                    file_name="Аналитический_отчет_Ситуационного_Центра.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"  # <-- MIME-тип для Word
                 )
         with col2:
             with open(OUTPUT_XLSX_REPORT, "rb") as f:
                 st.download_button(
-                    label="Скачать таблицы Топ-3 / Топ-10 .xlsx",
+                    label="📥 Скачать таблицы Топ-3 / Топ-10 .xlsx",
                     data=f.read(),
                     file_name="Рейтинг_муниципалитетов.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
