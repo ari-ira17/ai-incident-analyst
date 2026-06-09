@@ -17,10 +17,7 @@ from typing import Optional
 
 import requests
 
-# ---------------------------------------------------------------------------
-# Пути
-# ---------------------------------------------------------------------------
-# __file__ = src/map_utils/geocoder.py -> parent = src/map_utils -> parent = src -> parent = project root
+
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
 STREETS_PATH = os.path.join(_PROJECT_ROOT, "streets.json")
@@ -29,9 +26,7 @@ CACHE_PATH = os.path.join(
     "data", "reference", "geocode_cache.json",
 )
 
-# ---------------------------------------------------------------------------
-# streets.json (только для района)
-# ---------------------------------------------------------------------------
+
 _streets_cache: Optional[dict] = None
 
 
@@ -48,17 +43,14 @@ def _load_streets_district(street_name: str) -> str:
     if not _streets_cache:
         return ""
 
-    # Прямое совпадение
     if street_name in _streets_cache:
         return _streets_cache[street_name].get("district", "")
 
-    # Поиск по lower
     street_lower = street_name.lower().strip()
     for key, info in _streets_cache.items():
         if key.lower() == street_lower:
             return info.get("district", "")
 
-    # Поиск подстроки
     for key, info in _streets_cache.items():
         key_lower = key.lower()
         if street_lower in key_lower or key_lower in street_lower:
@@ -66,9 +58,7 @@ def _load_streets_district(street_name: str) -> str:
 
     return ""
 
-# ---------------------------------------------------------------------------
-# Кэш геокодинга (на диске)
-# ---------------------------------------------------------------------------
+
 _geocode_cache: Optional[dict] = None
 
 
@@ -95,9 +85,7 @@ def _save_geocode_cache():
         json.dump(_geocode_cache, f, ensure_ascii=False, indent=2)
 
 
-# ---------------------------------------------------------------------------
-# Районы Омска (для сопоставления из ответа Nominatim)
-# ---------------------------------------------------------------------------
+
 OMSK_DISTRICTS = [
     "Кировский",
     "Ленинский",
@@ -106,7 +94,7 @@ OMSK_DISTRICTS = [
     "Центральный",
 ]
 
-# Сопоставление возможных названий из Nominatim с каноническими названиями районов
+
 DISTRICT_ALIASES = {
     "кировский": "Кировский",
     "кировский административный округ": "Кировский",
@@ -135,12 +123,11 @@ def _extract_district_from_address(address: str) -> str:
         return ""
     address_lower = address.lower()
 
-    # Ищем по алиасам (более специфичные первыми)
+ 
     for alias, canonical in DISTRICT_ALIASES.items():
         if alias in address_lower:
             return canonical
 
-    # Если не нашли по алиасам, ищем просто по названиям районов
     for district in OMSK_DISTRICTS:
         if district.lower() in address_lower:
             return district
@@ -148,9 +135,7 @@ def _extract_district_from_address(address: str) -> str:
     return ""
 
 
-# ---------------------------------------------------------------------------
-# Геокодинг через Nominatim
-# ---------------------------------------------------------------------------
+
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 USER_AGENT = "AIIncidentAnalyst/1.0 (omsk-incident-map)"
 
@@ -197,7 +182,6 @@ def geocode_street(street_name: str, city: str = "Омск") -> Optional[dict]:
 
     cache_key = hashlib.md5(street_name.lower().encode()).hexdigest()
 
-    # 1. Кэш
     cache = _load_geocode_cache()
     if cache_key in cache:
         entry = cache[cache_key]
@@ -208,10 +192,8 @@ def geocode_street(street_name: str, city: str = "Омск") -> Optional[dict]:
             "source": "cache",
         }
 
-    # 2. Район из streets.json (точный, если улица там есть)
     district = _load_streets_district(street_name)
 
-    # 3. Nominatim — получаем координаты
     query = f"{city}, {street_name}"
     result = _nominatim_request(query)
 
@@ -219,7 +201,6 @@ def geocode_street(street_name: str, city: str = "Омск") -> Optional[dict]:
         result = _nominatim_request(street_name)
 
     if result:
-        # Если район не нашелся в streets.json — пробуем извлечь из ответа API
         if not district:
             address = result.get("address", {})
             district = (
@@ -250,10 +231,6 @@ def geocode_street(street_name: str, city: str = "Омск") -> Optional[dict]:
 
     return None
 
-
-# ---------------------------------------------------------------------------
-# Массовое геокодирование (для предзаполнения кэша)
-# ---------------------------------------------------------------------------
 def batch_geocode_streets(
     street_names: list[str],
     city: str = "Омск",
