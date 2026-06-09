@@ -1,4 +1,5 @@
 import streamlit as st
+import os
 
 st.set_page_config(page_title="AI-аналитик инцидентов | Цифровой прорыв", layout="wide")
 
@@ -67,7 +68,92 @@ st.write("""
 3. **Классификация** → На странице "Классификатор" автоматически определите категорию и ответственный отдел
 4. **Генерация ответов** → На странице "Генератор" создайте проекты ответов гражданам
 5. **Экспорт** → Скачайте результаты для дальнейшей обработки и отправки
+""")
 
+st.divider()
+
+st.write("## 📥 Демонстрационные материалы")
+st.markdown("Скачайте готовые результаты работы алгоритма на тестовой и основной выборках.")
+
+def load_file_for_download(filepath):
+    if os.path.exists(filepath):
+        with open(filepath, "rb") as f:
+            return f.read()
+    return None
+
+PATHS = {
+    "test_txt": "data/reports/test_report.txt",
+    "test_xlsx": "data/reports/test_tops.xlsx",
+    "main_txt": "data/reports/main_report.txt",
+    "main_xlsx": "data/reports/main_tops.xlsx",
+}
+
+col_test, col_main = st.columns(2)
+
+with col_test:
+    st.info("### 🧪 Тестовый датасет")
+    
+    file_data_txt = load_file_for_download(PATHS["test_txt"])
+    if file_data_txt:
+        st.download_button(
+            label="📄 Скачать текстовый отчет",
+            data=file_data_txt,
+            file_name="test_report.txt",
+            mime="text/plain",
+            use_container_width=True,
+            key="test_txt_btn" 
+        )
+    else:
+        # ДОБАВЛЕН КЛЮЧ ЗДЕСЬ
+        st.button("📄 Текстовый отчет недоступен", disabled=True, use_container_width=True, key="test_txt_disabled")
+
+    # Кнопка для Excel отчета (тест)
+    file_data_xlsx = load_file_for_download(PATHS["test_xlsx"])
+    if file_data_xlsx:
+        st.download_button(
+            label="📊 Скачать таблицу Топ-регионов",
+            data=file_data_xlsx,
+            file_name="test_tops.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True, 
+            key="test_xlsx_btn" 
+        )
+    else:
+        st.button("📊 Таблица Топ-регионов недоступна", disabled=True, use_container_width=True, key="test_xlsx_disabled")
+
+
+with col_main:
+    st.success("### 🏢 Основной датасет")
+    
+    main_data_txt = load_file_for_download(PATHS["main_txt"])
+    if main_data_txt:
+        st.download_button(
+            label="📄 Скачать текстовый отчет",
+            data=main_data_txt,
+            file_name="main_report.txt", 
+            mime="text/plain",
+            use_container_width=True,
+            key="main_txt_btn" 
+        )
+    else:
+        st.button("📄 Текстовый отчет недоступен", disabled=True, use_container_width=True, key="main_txt_disabled")
+
+    main_data_xlsx = load_file_for_download(PATHS["main_xlsx"])
+    if main_data_xlsx:
+        st.download_button(
+            label="📊 Скачать таблицу Топ-регионов",
+            data=main_data_xlsx,
+            file_name="main_tops.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+            key="main_xlsx_btn" 
+        )
+    else:
+        st.button("📊 Таблица Топ-регионов недоступна", disabled=True, use_container_width=True, key="main_xlsx_disabled")
+
+st.divider()
+
+st.write("""
 ## 📂 Форматы файлов
 
 **Входные данные**: файлы Excel (.xlsx) с минимум одной колонкой:
@@ -77,4 +163,3 @@ st.write("""
 
 **Начните работу:** выберите нужную страницу из меню слева ⬅️
 """)
-
