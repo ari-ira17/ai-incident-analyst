@@ -18,10 +18,8 @@ from src.workspace import render_workspace_panel, init_workspace, get_workspace,
 st.set_page_config(page_title="Analyst | Анализатор инцидентов", layout="wide")
 st.title("📊 Система анализа инцидентов ЖКХ и муниципалитетов")
 
-# ============ ИНИЦИАЛИЗАЦИЯ WORKSPACE ============
 init_workspace()
 
-# Основной контент (слева) и workspace (справа)
 left_col, right_col = st.columns([3, 1])
 
 with right_col:
@@ -30,7 +28,6 @@ with right_col:
 with left_col:
     fm = FileManager()
 
-    # ============ ПАРАМЕТРЫ ОБРАБОТКИ ============
     st.sidebar.header("Параметры обработки")
 
     pipeline_mode = st.sidebar.radio(
@@ -40,7 +37,6 @@ with left_col:
 
     execute_button = st.sidebar.button("Запустить анализ", key="analyst_run")
 
-    # ============ ОСНОВНОЙ КОНТЕНТ ============
     ws = get_workspace()
     classified_file_path = ws.get("classified_file")
 

@@ -5,10 +5,8 @@ from src.workspace import render_workspace_panel, init_workspace
 
 st.set_page_config(page_title="AI-аналитик инцидентов | Цифровой прорыв", layout="wide")
 
-# Инициализация workspace
 init_workspace()
 
-# Основной контент (слева) и workspace (справа)
 left_col, right_col = st.columns([3, 1])
 
 with right_col:

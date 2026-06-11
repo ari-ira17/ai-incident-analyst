@@ -28,10 +28,10 @@ from src.workspace import render_workspace_panel, init_workspace, get_workspace
 st.set_page_config(page_title="Карта | Анализатор инцидентов", layout="wide")
 st.title("🗺️ Интерактивная карта инцидентов Омска")
 
-# ─── ИНИЦИАЛИЗАЦИЯ WORKSPACE ──────────────────────────────────────────
+
 init_workspace()
 
-# Основной контент (слева) и workspace (справа)
+
 left_col, right_col = st.columns([3, 1])
 
 with right_col:
@@ -45,12 +45,11 @@ with left_col:
         "Особо опасные (4–5) выделены гало."
     )
 
-    # ─── Загрузка данных через workspace ──────────────────────────────────
+ 
     streets_mapping = load_streets_mapping()
     ws = get_workspace()
     analyzed_file_path = ws.get("analyzed_file")
 
-    # ─── Боковая панель ──────────────────────────────────────────────────
     st.sidebar.header("⚙️ Параметры карты")
 
     district_list = list(DISTRICT_COLORS.keys())
@@ -67,7 +66,6 @@ with left_col:
         help="Показывать инциденты с опасностью от выбранного уровня",
     )
 
-    # ─── Отображение карты ───────────────────────────────────────────────
     if analyzed_file_path and os.path.exists(analyzed_file_path):
         try:
             df = pl.read_excel(analyzed_file_path, engine="calamine")
@@ -93,7 +91,6 @@ with left_col:
                     st.error(f"Ошибка при построении карты: {e}")
                     st.exception(e)
 
-            # ─── Статистика ──────────────────────────────────────────────────
             st.divider()
             st.subheader("📊 Статистика по районам")
 
@@ -119,7 +116,6 @@ with left_col:
                         unsafe_allow_html=True,
                     )
 
-            # ─── Детализация ─────────────────────────────────────────────────
             st.divider()
             st.subheader("🔎 Детализация по районам")
             expand_district = st.selectbox(
@@ -145,7 +141,6 @@ with left_col:
     else:
         st.info("⬅️ Выберите обработанный файл в правой панели Workspace (папка «Обработанные (с severity)»).")
 
-        # Превью пустой карты с районами
         st.markdown("---")
         st.markdown("### 👀 Предпросмотр: районы Омска")
         empty_map = build_incident_map(

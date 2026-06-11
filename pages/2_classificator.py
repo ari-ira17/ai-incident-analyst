@@ -7,17 +7,14 @@ import json
 from pathlib import Path
 from openpyxl import load_workbook
 
-# Импорт функций предобработки файлов
 from run_pipeline import extract_and_clean
 
-# Импорт LLM классификатора
 from src.llm.batcher import create_batches
 from src.llm.stage1_is_problem import classify_is_problem
 from src.llm.stage2_topic import classify_topic
 from src.llm.stage3_department import add_department_to_csv
 from src.preprocessing.cleaner import IncidentDataCleaner
 
-# Импорт workspace
 from src.workspace import render_workspace_panel, init_workspace, get_workspace, set_workspace_file, FileManager
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent   
@@ -26,10 +23,8 @@ sys.path.insert(0, str(PROJECT_ROOT))
 st.set_page_config(page_title="Classificator | Анализатор инцидентов", layout="wide")
 st.title("🤖 LLM Классификатор инцидентов")
 
-# ============ ИНИЦИАЛИЗАЦИЯ WORKSPACE ============
 init_workspace()
 
-# Основной контент (слева) и workspace (справа)
 left_col, right_col = st.columns([3, 1])
 
 with right_col:
@@ -38,7 +33,6 @@ with right_col:
 with left_col:
     fm = FileManager()
 
-    # ============ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ============
     def load_excel_simple(file_path: str) -> pd.DataFrame:
         """Загружает Excel файл с любой структурой столбцов"""
         wb = load_workbook(file_path, read_only=True)
@@ -88,7 +82,6 @@ with left_col:
             return result
         return []
 
-    # ============ ОСНОВНОЙ КОНТЕНТ ============
     st.write("Многоэтапная LLM-классификация инцидентов:")
     st.write("1. **Этап 1** — определение is_problem")
     st.write("2. **Этап 2** — определение topic")
