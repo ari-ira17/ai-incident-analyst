@@ -2,17 +2,6 @@
 src/workspace.py
 ────────────────
 Единый файловый менеджер (workspace) для всех страниц приложения.
-
-Пользователь загружает файлы в workspace и сам выбирает,
-с каким файлом работать на каждой странице.
-
-Структура workspace:
-  workspace/
-    raw/          — исходные файлы (загружает пользователь)
-    classified/   — после LLM-классификации
-    analyzed/     — после pipeline с severity
-    generated/    — после генерации ответов
-    reports/      — отчёты аналитика
 """
 
 import os
@@ -27,14 +16,13 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 WORKSPACE_DIR = os.path.join(PROJECT_ROOT, "workspace")
 
 FOLDERS = {
-    "raw": "📁 Исходные файлы",
-    "classified": "📁 Классифицированные",
-    "analyzed": "📁 Обработанные (с severity)",
-    "generated": "📁 Сгенерированные ответы",
-    "reports": "📁 Отчёты",
+    "raw": "Исходные файлы",
+    "classified": "Классифицированные данные",
+    "analyzed": "Обработанные данные (Severity)",
+    "generated": "Сгенерированные ответы",
+    "reports": "Аналитические отчеты",
 }
 
-# Какая страница работает с какой папкой (для подсветки)
 PAGE_FOLDER_MAP = {
     "classificator": "raw",
     "analyst": "classified",
@@ -42,7 +30,6 @@ PAGE_FOLDER_MAP = {
     "map": "analyzed",
 }
 
-# Тестовые файлы (копируются из data/raw/)
 TEST_FILES = {
     "Тестовый файл (fast)": "data/raw/тестовый файл.xlsx",
     "Тестовый файл (slow)": "data/raw/test_40.xlsx",
@@ -53,21 +40,16 @@ TEST_FILES = {
 # FileManager — работа с файловой системой
 # ---------------------------------------------------------------------------
 
-
 class FileManager:
-    """Операции с файлами в workspace."""
-
     def __init__(self, workspace_dir: str = WORKSPACE_DIR):
         self.workspace_dir = workspace_dir
         self._ensure_folders()
 
     def _ensure_folders(self):
-        """Создаёт все папки workspace при инициализации."""
         for folder in FOLDERS:
             os.makedirs(os.path.join(self.workspace_dir, folder), exist_ok=True)
 
     def list_files(self, folder: str) -> list[str]:
-        """Возвращает список файлов в папке (только .xlsx, .csv, .txt)."""
         folder_path = os.path.join(self.workspace_dir, folder)
         if not os.path.exists(folder_path):
             return []
@@ -79,11 +61,9 @@ class FileManager:
         return files
 
     def get_file_path(self, folder: str, filename: str) -> str:
-        """Полный путь к файлу в workspace."""
         return os.path.join(self.workspace_dir, folder, filename)
 
     def upload_file(self, folder: str, uploaded_file) -> str | None:
-        """Сохраняет загруженный файл в папку workspace. Возвращает путь."""
         if uploaded_file is None:
             return None
         folder_path = os.path.join(self.workspace_dir, folder)
@@ -94,13 +74,11 @@ class FileManager:
         return file_path
 
     def delete_file(self, folder: str, filename: str):
-        """Удаляет файл из workspace."""
         file_path = os.path.join(self.workspace_dir, folder, filename)
         if os.path.exists(file_path):
             os.remove(file_path)
 
     def copy_test_files(self):
-        """Копирует тестовые файлы из data/raw/ в workspace/raw/."""
         copied = []
         for label, src_rel in TEST_FILES.items():
             src = os.path.join(PROJECT_ROOT, src_rel)
@@ -111,13 +89,11 @@ class FileManager:
         return copied
 
     def get_output_path(self, folder: str, filename: str) -> str:
-        """Возвращает путь для сохранения результата."""
         folder_path = os.path.join(self.workspace_dir, folder)
         os.makedirs(folder_path, exist_ok=True)
         return os.path.join(folder_path, filename)
 
     def read_file_bytes(self, folder: str, filename: str) -> bytes | None:
-        """Читает файл как байты для скачивания."""
         file_path = os.path.join(self.workspace_dir, folder, filename)
         if os.path.exists(file_path):
             with open(file_path, "rb") as f:
@@ -125,7 +101,6 @@ class FileManager:
         return None
 
     def get_mime_type(self, filename: str) -> str:
-        """Определяет MIME-тип по расширению файла."""
         if filename.lower().endswith(".xlsx"):
             return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         elif filename.lower().endswith(".xls"):
@@ -136,16 +111,13 @@ class FileManager:
             return "text/plain"
         return "application/octet-stream"
 
-
 # ---------------------------------------------------------------------------
 # Session state
 # ---------------------------------------------------------------------------
 
 WORKSPACE_KEY = "workspace"
 
-
 def init_workspace():
-    """Инициализирует workspace в session_state."""
     if WORKSPACE_KEY not in st.session_state:
         st.session_state[WORKSPACE_KEY] = {
             "raw_file": None,
@@ -154,68 +126,148 @@ def init_workspace():
             "generated_file": None,
         }
 
-
 def get_workspace() -> dict:
-    """Возвращает словарь workspace из session_state."""
     init_workspace()
     return st.session_state[WORKSPACE_KEY]
 
-
 def set_workspace_file(folder: str, file_path: str):
-    """Устанавливает выбранный файл для папки."""
     ws = get_workspace()
     key = f"{folder}_file"
     ws[key] = file_path
 
-
 # ---------------------------------------------------------------------------
-# Отрисовка workspace (правая панель)
+# Отрисовка панели
 # ---------------------------------------------------------------------------
-
 
 def render_workspace_panel(active_page: str = None):
-    """
-    Рендерит workspace в правой колонке.
-
-    Параметры:
-        active_page: str — идентификатор текущей страницы
-            ('classificator', 'analyst', 'generator', 'map', None для app.py)
-    """
     init_workspace()
     fm = FileManager()
     ws = get_workspace()
 
-    st.markdown("## 📂 Workspace")
+    # Прокачанные корпоративные стили
+    st.markdown("""
+    <style>
+        div[data-testid="stColumn"]:has(.ws-title) {
+            border-left: 1px solid rgba(128, 128, 128, 0.2);
+            padding-left: 1.5rem !important;
+        }
+        .ws-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.1rem;
+            letter-spacing: -0.01em;
+        }
+        .ws-folder-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            margin-top: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+        .ws-folder-active {
+            color: #0f62fe !important;
+            border-bottom: 1px dashed rgba(15, 98, 254, 0.4);
+            display: inline-block;
+        }
+        
+        /* СТИЛИЗАЦИЯ КНОПОК ФАЙЛОВ */
+        /* Нацеливаемся на обертку кнопок внутри Workspace, чтобы не сломать кнопки на главном экране */
+        div[data-testid="stColumn"]:has(.ws-title) div[data-testid="stButton"] button {
+            border-radius: 4px !important;
+            font-size: 0.85rem !important;
+            padding: 0.35rem 0.5rem !important;
+            height: auto !important;
+        }
+        
+        /* Специфичный хак для ПЕРЕОПРЕДЕЛЕНИЯ яркой "primary" кнопки Streamlit */
+        div[data-testid="stColumn"]:has(.ws-title) div[data-testid="stButton"] button[data-testid="baseButton-primary"] {
+            background-color: rgba(15, 98, 254, 0.15) !important; /* Полупрозрачный строгий синий */
+            color: #74a3ff !important; /* Мягкий не утомляющий текст */
+            border: 1px solid rgba(15, 98, 254, 0.5) !important; /* Аккуратная рамка */
+            box-shadow: none !important;
+        }
+        
+        div[data-testid="stColumn"]:has(.ws-title) div[data-testid="stButton"] button[data-testid="baseButton-primary"]:hover {
+            background-color: rgba(15, 98, 254, 0.25) !important;
+            color: #fff !important;
+            border-color: #0f62fe !important;
+        }
+
+        /* Скачивание файлов — делаем шрифт моноширинным и аккуратным */
+        div[data-testid="stColumn"]:has(.ws-title) div[data-testid="stDownloadButton"] button {
+            font-family: monospace !important;
+            font-size: 0.8rem !important;
+            background-color: transparent !important;
+            border: 1px solid rgba(128, 128, 128, 0.2) !important;
+            color: gray !important;
+            padding: 0.35rem 0.2rem !important;
+        }
+        div[data-testid="stColumn"]:has(.ws-title) div[data-testid="stDownloadButton"] button:hover {
+            border-color: rgba(128, 128, 128, 0.5) !important;
+            color: var(--text-color) !important;
+        }
+
+        .ws-status-container {
+            background-color: var(--secondary-background-color);
+            border: 1px solid rgba(128, 128, 128, 0.2);
+            border-radius: 4px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+        }
+        .status-tag {
+            font-family: monospace;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 3px;
+            text-transform: uppercase;
+        }
+        .status-ready { background-color: rgba(36, 161, 72, 0.15); color: #24a148; }
+        .status-wait { background-color: rgba(241, 196, 15, 0.15); color: #b7950b; }
+        .status-none { background-color: rgba(128, 128, 128, 0.15); color: gray; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<div class='ws-title'>Workspace</div>", unsafe_allow_html=True)
     st.caption("Файловый менеджер проекта")
 
-    # Определяем, какая папка активна для текущей страницы
+    # Заякоренная зона загрузки
+    uploaded = st.file_uploader(
+        "Загрузить новый реестр в систему",
+        type=["xlsx", "xls", "csv"],
+        key="ws_fixed_global_uploader",
+    )
+    if uploaded is not None:
+        path = fm.upload_file("raw", uploaded)
+        if path:
+            ws["raw_file"] = path
+            st.rerun()
+
+    st.markdown("<div style='margin-top:1rem; border-bottom:1px solid rgba(128,128,128,0.1);'></div>", unsafe_allow_html=True)
+
     active_folder = PAGE_FOLDER_MAP.get(active_page) if active_page else None
 
-    # Отображаем каждую папку
     for folder_key, folder_label in FOLDERS.items():
         is_active = folder_key == active_folder
         files = fm.list_files(folder_key)
         ws_key = f"{folder_key}_file"
 
-        # Заголовок папки
         if is_active:
-            st.markdown(f"**{folder_label}** ←")
+            st.markdown(f"<div class='ws-folder-title ws-folder-active'>{folder_label}</div>", unsafe_allow_html=True)
         else:
-            st.markdown(f"{folder_label}")
+            st.markdown(f"<div class='ws-folder-title'>{folder_label}</div>", unsafe_allow_html=True)
 
-        # Список файлов
         if files:
             for fname in files:
                 fpath = fm.get_file_path(folder_key, fname)
                 is_selected = ws.get(ws_key) == fpath
 
-                # Строка: кнопка выбора + кнопка скачивания
-                cols = st.columns([4, 1])
+                # Идеальная пропорция колонок, чтобы кнопки скачивания не ломались по буквам
+                cols = st.columns([5, 2])
                 with cols[0]:
-                    if is_selected:
-                        label = f"● {fname}"
-                    else:
-                        label = f"○ {fname}"
+                    prefix = "[x] " if is_selected else "[ ] "
+                    label = f"{prefix}{fname}"
 
                     if st.button(
                         label,
@@ -230,7 +282,7 @@ def render_workspace_panel(active_page: str = None):
                     file_bytes = fm.read_file_bytes(folder_key, fname)
                     if file_bytes is not None:
                         st.download_button(
-                            label="⬇",
+                            label="CSV" if fname.lower().endswith(".csv") else "XLSX",
                             data=file_bytes,
                             file_name=fname,
                             mime=fm.get_mime_type(fname),
@@ -238,51 +290,41 @@ def render_workspace_panel(active_page: str = None):
                             use_container_width=True,
                         )
         else:
-            st.caption("  (пусто)")
+            st.markdown("<div style='font-size:0.85rem; color:gray; font-style:italic; padding-left:2px;'>Реестр пуст</div>", unsafe_allow_html=True)
 
-        # Кнопка загрузки для raw/
-        if folder_key == "raw":
-            uploaded = st.file_uploader(
-                "Загрузить файл",
-                type=["xlsx", "xls", "csv"],
-                key=f"ws_upload_{folder_key}",
-                label_visibility="collapsed",
-            )
-            if uploaded is not None:
-                path = fm.upload_file(folder_key, uploaded)
-                if path:
-                    st.success(f"✅ {uploaded.name}")
-                    # Автоматически выбираем загруженный файл
-                    ws[ws_key] = path
-                    st.rerun()
+        st.markdown("<div style='margin-top:0.75rem; border-bottom:1px solid rgba(128,128,128,0.1);'></div>", unsafe_allow_html=True)
 
-        st.markdown("---")
-
-    # Кнопка копирования тестовых файлов
+    # Тестовые данные
     test_raw_dir = os.path.join(PROJECT_ROOT, "data", "raw")
-    if os.path.exists(test_raw_dir) and any(
-        f.endswith((".xlsx", ".xls")) for f in os.listdir(test_raw_dir)
-    ):
-        if st.button("🔄 Копировать тестовые файлы", use_container_width=True):
+    if os.path.exists(test_raw_dir) and any(f.endswith((".xlsx", ".xls")) for f in os.listdir(test_raw_dir)):
+        st.markdown("<div style='margin-top:1rem;'></div>", unsafe_allow_html=True)
+        if st.button("Инициализировать тесты", use_container_width=True, type="secondary"):
             copied = fm.copy_test_files()
             if copied:
-                st.success(f"Скопировано: {', '.join(copied)}")
                 st.rerun()
-            else:
-                st.warning("Тестовые файлы не найдены в data/raw/")
 
     # Статус конвейера
-    st.markdown("### 📊 Статус конвейера")
-    status_icons = {
-        "raw_file": ("📄 Исходный", "✅" if ws.get("raw_file") else "❌"),
-        "classified_file": ("🏷 Классифицирован", "✅" if ws.get("classified_file") else "⏳"),
-        "analyzed_file": ("📊 Проанализирован", "✅" if ws.get("analyzed_file") else "⏳"),
-        "generated_file": ("✉️ Сгенерирован", "✅" if ws.get("generated_file") else "⏳"),
+    st.markdown("<div class='ws-folder-title' style='margin-top:2rem;'>Статус конвейера</div>", unsafe_allow_html=True)
+    
+    status_config = {
+        "raw_file": ("Исходный реестр", "Загружен", "Отсутствует"),
+        "classified_file": ("Классификация", "Выполнена", "В очереди"),
+        "analyzed_file": ("Анализ Severity", "Выполнен", "В очереди"),
+        "generated_file": ("Синтез ответов", "Выполнен", "В очереди"),
     }
-    for key, (label, icon) in status_icons.items():
+    
+    st.markdown("<div class='ws-status-container'>", unsafe_allow_html=True)
+    for key, (label, text_ready, text_wait) in status_config.items():
         val = ws.get(key)
         if val:
             fname = os.path.basename(val)
-            st.markdown(f"{icon} **{label}:** `{fname}`")
+            tag_html = f"<span class='status-tag status-ready'>{text_ready}</span>"
+            st.markdown(f"<div style='font-size:0.85rem; margin-bottom:0.4rem;'>{tag_html} <b>{label}:</b> <code style='font-size:0.75rem;'>{fname}</code></div>", unsafe_allow_html=True)
         else:
-            st.markdown(f"{icon} {label}: —")
+            is_raw = (key == "raw_file")
+            style_class = "status-none" if is_raw else "status-wait"
+            status_text = text_wait
+            
+            tag_html = f"<span class='status-tag {style_class}'>{status_text}</span>"
+            st.markdown(f"<div style='font-size:0.85rem; margin-bottom:0.4rem; color:gray;'>{tag_html} {label}</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)

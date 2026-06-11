@@ -17,11 +17,88 @@ from src.preprocessing.cleaner import IncidentDataCleaner
 
 from src.workspace import render_workspace_panel, init_workspace, get_workspace, set_workspace_file, FileManager
 
+st.markdown("""
+<style>
+
+.page-header{
+    margin-bottom:2rem;
+}
+
+.page-badge{
+    display:inline-block;
+    padding:6px 12px;
+    border-radius:999px;
+    background:rgba(15,98,254,.08);
+    color:#0f62fe;
+    font-size:.75rem;
+    font-weight:700;
+    letter-spacing:.08em;
+    margin-bottom:.8rem;
+}
+
+.title-row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+}
+
+.title-bar{
+    width:5px;
+    height:44px;
+    background:#0f62fe;
+    border-radius:3px;
+    flex-shrink:0;
+}
+
+.page-title{
+    font-size:2.2rem;
+    font-weight:700;
+    margin:0;
+    line-height:1.1;
+}
+
+.page-subtitle{
+    margin-top:.8rem;
+    color:gray;
+    font-size:1rem;
+    padding-bottom:1rem;
+    border-bottom:1px solid rgba(120,120,120,.2);
+}
+
+.block-card{
+    border:1px solid rgba(15,98,254,.12);
+    border-radius:12px;
+    padding:1.25rem;
+    background:var(--secondary-background-color);
+}
+
+</style>
+""", unsafe_allow_html=True)
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent   
 sys.path.insert(0, str(PROJECT_ROOT))
 
 st.set_page_config(page_title="Classificator | Анализатор инцидентов", layout="wide")
-st.title("🤖 LLM Классификатор инцидентов")
+st.markdown("""
+<div class="page-header">
+
+<div class="page-badge">
+CLASSIFICATION MODULE
+</div>
+
+<div class="title-row">
+    <div class="title-bar"></div>
+    <h1 class="page-title">
+        Классификатор инцидентов
+    </h1>
+</div>
+
+<div class="page-subtitle">
+Многоэтапная LLM-классификация: определение проблемы, темы и подразделения
+</div>
+
+</div>
+""", unsafe_allow_html=True)
 
 init_workspace()
 
@@ -82,10 +159,38 @@ with left_col:
             return result
         return []
 
-    st.write("Многоэтапная LLM-классификация инцидентов:")
-    st.write("1. **Этап 1** — определение is_problem")
-    st.write("2. **Этап 2** — определение topic")
-    st.write("3. **Этап 3** — определение department")
+    st.markdown("""
+    <div style="
+        padding: 1.2rem 1.4rem;
+        border: 1px solid rgba(15,98,254,.22);
+        border-left: 5px solid #0f62fe;
+        border-radius: 10px;
+        background: var(--secondary-background-color);
+        margin: 1rem 0 1.5rem 0;
+    ">
+
+    <div style="
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin-bottom: 0.8rem;
+    ">
+    ⚙️ Пайплайн обработки
+    </div>
+
+    <div style="
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: var(--text-color);
+    ">
+
+    <b>1.</b> Этап 1 — определение <b>is_problem</b><br>
+    <b>2.</b> Этап 2 — определение <b>topic</b><br>
+    <b>3.</b> Этап 3 — определение <b>department</b>
+
+    </div>
+
+    </div>
+    """, unsafe_allow_html=True)
 
     ws = get_workspace()
     raw_file_path = ws.get("raw_file")

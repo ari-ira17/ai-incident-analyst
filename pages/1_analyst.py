@@ -15,8 +15,82 @@ from src.core.analytics import IncidentAnalytics
 
 from src.workspace import render_workspace_panel, init_workspace, get_workspace, set_workspace_file, FileManager
 
-st.set_page_config(page_title="Analyst | Анализатор инцидентов", layout="wide")
-st.title("📊 Система анализа инцидентов ЖКХ и муниципалитетов")
+st.markdown("""
+<style>
+
+.page-header{
+    margin-bottom:2rem;
+}
+
+.page-badge{
+    display:inline-block;
+    padding:6px 12px;
+    border-radius:999px;
+    background:rgba(15,98,254,.08);
+    color:#0f62fe;
+    font-size:.75rem;
+    font-weight:700;
+    letter-spacing:.08em;
+    margin-bottom:.8rem;
+}
+
+.page-subtitle{
+    margin-top:.8rem;
+    color:gray;
+    font-size:1rem;
+    padding-bottom:1rem;
+    border-bottom:1px solid rgba(120,120,120,.2);
+}
+
+.block-card{
+    border:1px solid rgba(15,98,254,.12);
+    border-radius:12px;
+    padding:1.25rem;
+    background:var(--secondary-background-color);
+}
+.title-row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+}
+
+.title-bar{
+    width:5px;
+    height:44px; /* под высоту заголовка */
+    background:#0f62fe;
+    border-radius:3px;
+}
+
+.page-title{
+    font-size:2.2rem;
+    font-weight:700;
+    margin:0;
+    line-height:1.1;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+<div class="page-header">
+
+<div class="page-badge">
+ANALYTICS MODULE
+</div>
+
+<div class="title-row">
+    <div class="title-bar"></div>
+    <h1 class="page-title">
+        Аналитик инцидентов
+    </h1>
+</div>
+
+<div class="page-subtitle">
+Агрегация обращений, расчет критичности, рейтинг муниципалитетов и управленческая отчетность
+</div>
+
+</div>
+""", unsafe_allow_html=True)
 
 init_workspace()
 
@@ -43,7 +117,15 @@ with left_col:
     if classified_file_path is None:
         st.info("⬅️ Выберите классифицированный файл в правой панели Workspace (папка «Классифицированные»).")
     else:
-        st.success(f"✅ Выбран файл: `{os.path.basename(classified_file_path)}`")
+        st.markdown(f"""
+        <div class="block-card">
+
+        <b>Источник данных</b><br><br>
+
+        📄 {os.path.basename(classified_file_path)}
+
+        </div>
+        """, unsafe_allow_html=True)
 
         if execute_button:
             with st.spinner("Выполняется предобработка данных, расчет метрик и генерация отчетов..."):
@@ -75,10 +157,36 @@ with left_col:
                 st.session_state["analyzer"] = analytics
                 st.session_state["processing_done"] = True
                 
-                st.success("Анализ успешно завершен!")
+                k1, k2, k3 = st.columns(3)
+
+                with k1:
+                    st.metric(
+                        "Муниципалитетов",
+                        len(st.session_state["top_municipalities"])
+                    )
+
+                with k2:
+                    st.metric(
+                        "Статус",
+                        "Готово"
+                    )
+
+                with k3:
+                    st.metric(
+                        "Отчеты",
+                        "3 файла"
+                    )
 
         if st.session_state.get("processing_done"):
-            st.subheader("Скачать результаты анализа")
+            st.markdown("""
+            <h3 style="
+            margin-top:1rem;
+            margin-bottom:1rem;
+            font-weight:700;
+            ">
+            Результаты анализа
+            </h3>
+            """, unsafe_allow_html=True)
             
             ws = get_workspace()
             classified_path = ws.get("classified_file", "")
@@ -119,7 +227,15 @@ with left_col:
             
             st.divider()
             
-            st.subheader("Визуализация структуры проблем по муниципалитетам")
+            st.markdown("""
+            <h3 style="
+            margin-top:2rem;
+            margin-bottom:1rem;
+            font-weight:700;
+            ">
+            Структура проблем по муниципалитетам
+            </h3>
+            """, unsafe_allow_html=True)
             
             selected_mun = st.selectbox(
                 "Выберите муниципалитет для детализации:",
@@ -169,7 +285,15 @@ with left_col:
                 else:
                     st.info("В выбранном регионе отсутствуют зарегистрированные инциденты.")
 
-            st.subheader("📊 Топ-10 муниципалитетов по суммарной критичности")
+            st.markdown("""
+            <h3 style="
+            margin-top:2rem;
+            margin-bottom:1rem;
+            font-weight:700;
+            ">
+            Рейтинг муниципалитетов по критичности
+            </h3>
+            """, unsafe_allow_html=True)
             
             top_regions_df = st.session_state["analyzer"].get_top_regions(limit=10)
             if not top_regions_df.is_empty():

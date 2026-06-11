@@ -25,8 +25,109 @@ from src.map_utils.map_utils import (
 )
 from src.workspace import render_workspace_panel, init_workspace, get_workspace
 
+st.markdown("""
+<style>
+
+/* =========================
+   MAP PAGE HEADER (shared style)
+========================= */
+
+.page-header{
+    margin-bottom:2rem;
+}
+
+.page-badge{
+    display:inline-block;
+    padding:6px 12px;
+    border-radius:999px;
+    background:rgba(15,98,254,.08);
+    color:#0f62fe;
+    font-size:.75rem;
+    font-weight:700;
+    letter-spacing:.08em;
+    margin-bottom:.8rem;
+}
+
+.title-row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+}
+
+.title-bar{
+    width:5px;
+    height:44px;
+    background:#0f62fe;
+    border-radius:3px;
+    flex-shrink:0;
+}
+
+.page-title{
+    font-size:2.2rem;
+    font-weight:700;
+    margin:0;
+    line-height:1.1;
+}
+
+.page-subtitle{
+    margin-top:.8rem;
+    color:var(--text-color);
+    opacity:0.75;
+    font-size:1rem;
+    padding-bottom:1rem;
+    border-bottom:1px solid rgba(120,120,120,.2);
+}
+
+/* =========================
+   INFO BLOCK (map description)
+========================= */
+
+.map-info{
+    padding:1rem 1.2rem;
+    border-radius:12px;
+    border:1px solid rgba(15,98,254,.18);
+    border-left:5px solid #0f62fe;
+    background:var(--secondary-background-color);
+    margin: 1rem 0 1.5rem 0;
+    font-size:0.95rem;
+    line-height:1.5;
+}
+
+/* =========================
+   SIDEBAR STYLE (optional polish)
+========================= */
+
+section[data-testid="stSidebar"]{
+    border-right:1px solid rgba(120,120,120,.2);
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+
 st.set_page_config(page_title="Карта | Анализатор инцидентов", layout="wide")
-st.title("🗺️ Интерактивная карта инцидентов Омска")
+
+st.markdown("""
+<div class="page-header">
+
+<div class="page-badge">
+MAP MODULE
+</div>
+
+<div class="title-row">
+    <div class="title-bar"></div>
+    <h1 class="page-title">
+        Интерактивная карта инцидентов Омска
+    </h1>
+</div>
+
+<div class="page-subtitle">
+Визуализация происшествий по реальным координатам улиц
+</div>
+
+</div>
+""", unsafe_allow_html=True)
+
 
 
 init_workspace()
@@ -38,12 +139,14 @@ with right_col:
     render_workspace_panel(active_page="map")
 
 with left_col:
-    st.markdown(
-        "Визуализация происшествий по реальным координатам улиц. "
-        "**Размер кружка** → уровень опасности (1–5). "
-        "**Цвет** → от зелёного (1) до красного (5). "
-        "Особо опасные (4–5) выделены гало."
-    )
+    st.markdown("""
+    <div class="map-info">
+    <b>Что отображается на карте:</b><br>
+    • Размер кружка → уровень опасности (1–5)<br>
+    • Цвет → от зелёного (низкий риск) до красного (высокий риск)<br>
+    • Особо опасные инциденты (4–5) выделяются визуально усиленным маркером
+    </div>
+    """, unsafe_allow_html=True)
 
  
     streets_mapping = load_streets_mapping()

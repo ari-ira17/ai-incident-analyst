@@ -6,6 +6,180 @@ import sys
 from pathlib import Path
 from openpyxl import load_workbook
 
+st.markdown("""
+<style>
+            
+.page-header{
+    margin-bottom:2rem;
+}
+
+.page-badge{
+    display:inline-block;
+    padding:6px 12px;
+    border-radius:999px;
+    background:rgba(15,98,254,.08);
+    color:#0f62fe;
+    font-size:.75rem;
+    font-weight:700;
+    letter-spacing:.08em;
+    margin-bottom:.8rem;
+}
+
+.title-row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+}
+
+.title-bar{
+    width:5px;
+    height:44px;
+    background:#0f62fe;
+    border-radius:3px;
+    flex-shrink:0;
+}
+
+.page-title{
+    font-size:2.2rem;
+    font-weight:700;
+    margin:0;
+    line-height:1.1;
+}
+
+.page-subtitle{
+    margin-top:.8rem;
+    color:gray;
+    font-size:1rem;
+    padding-bottom:1rem;
+    border-bottom:1px solid rgba(120,120,120,.2);
+}
+
+/* =========================
+   THEME VARIABLES (LIGHT + DARK SAFE)
+========================= */
+:root {
+    --wf-bg: var(--secondary-background-color);
+    --wf-border: rgba(15,98,254,.12);
+    --wf-text: var(--text-color);
+    --wf-muted: rgba(120,120,120,.85);
+    --wf-accent: #0f62fe;
+}
+
+/* =========================
+   CONTAINER
+========================= */
+.workflow-container{
+    display:flex;
+    gap:1rem;
+    flex-wrap:wrap;
+    margin: 1rem 0 2rem 0;
+}
+
+/* =========================
+   STEP CARD (MAIN ELEMENT)
+========================= */
+.workflow-step-hz{
+    flex:1;
+    min-width:180px;
+
+    background:var(--wf-bg);
+    border:1px solid var(--wf-border);
+    border-radius:14px;
+
+    padding:1.1rem 1rem;
+
+    transition: all .25s ease;
+    position:relative;
+
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+}
+
+/* hover effect */
+.workflow-step-hz:hover{
+    transform: translateY(-3px);
+    border-color: rgba(15,98,254,.35);
+    box-shadow: 0 10px 24px rgba(15,98,254,.10);
+}
+
+/* =========================
+   NUMBER BADGE
+========================= */
+.step-num-hz{
+    display:inline-block;
+
+    font-size:0.72rem;
+    font-weight:700;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+
+    color:var(--wf-accent);
+
+    margin-bottom:0.6rem;
+}
+
+/* =========================
+   TITLE
+========================= */
+.step-title-hz{
+    font-size:0.98rem;
+    font-weight:700;
+
+    margin-bottom:0.3rem;
+
+    color:var(--wf-text);
+}
+
+/* =========================
+   DESCRIPTION
+========================= */
+.step-desc-hz{
+    font-size:0.85rem;
+    line-height:1.4;
+
+    color:var(--wf-muted);
+}
+
+/* =========================
+   OPTIONAL: CONNECTOR LINE FEEL (VISUAL FLOW)
+========================= */
+.workflow-step-hz:not(:last-child)::after{
+    content:"";
+    position:absolute;
+    right:-0.5rem;
+    top:50%;
+    width:1rem;
+    height:2px;
+    background:rgba(15,98,254,.2);
+    display:none; /* включи, если хочешь "цепочку" */
+}
+            
+.step-card{
+    flex:1;
+    min-width:180px;
+
+    background:var(--wf-bg);
+    border:1px solid var(--wf-border);
+    border-radius:14px;
+
+    padding:1.1rem 1rem;
+
+    transition: all .25s ease;
+    position:relative;
+
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+}
+
+.step-number{
+    display:inline-block;
+    font-size:0.72rem;
+    font-weight:700;
+    color:#0f62fe;
+    margin-bottom:0.5rem;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent   
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -14,7 +188,27 @@ from src.llm.llama_client import generate
 from src.workspace import render_workspace_panel, init_workspace, get_workspace, set_workspace_file, FileManager
 
 st.set_page_config(page_title="Generator | Анализатор инцидентов", layout="wide")
-st.title("✉️ Генератор ответов на обращения")
+
+st.markdown("""
+<div class="page-header">
+
+<div class="page-badge">
+RESPONSE GENERATOR MODULE
+</div>
+
+<div class="title-row">
+    <div class="title-bar"></div>
+    <h1 class="page-title">
+        Генератор ответов на обращения
+    </h1>
+</div>
+
+<div class="page-subtitle">
+LLM формирует официальные черновики ответов на обращения граждан на основе классификации инцидентов
+</div>
+
+</div>
+""", unsafe_allow_html=True)
 
 init_workspace()
 
@@ -104,7 +298,38 @@ with left_col:
     Черновик ответа (на русском):"""
         return prompt
 
-    st.write("Генерация персонализированных черновиков ответов на обращения граждан с использованием LLM")
+    st.markdown("""
+    <div style="
+        padding: 1.2rem 1.4rem;
+        border: 1px solid rgba(15,98,254,.25);
+        border-left: 5px solid #0f62fe;
+        border-radius: 10px;
+        background: var(--secondary-background-color);
+        margin: 1rem 0 1.5rem 0;
+    ">
+
+    <div style="
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-bottom: 0.6rem;
+    ">
+    ⚙️ Процесс обработки
+    </div>
+
+    <div style="
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: var(--text-color);
+    ">
+
+    <b>1.</b> Анализ текста — обработка входных обращений<br>
+    <b>2.</b> LLM генерация — формирование ответа<br>
+    <b>3.</b> Финальный ответ — оформление официального шаблона
+
+    </div>
+
+    </div>
+    """, unsafe_allow_html=True)
 
     ws = get_workspace()
     classified_file_path = ws.get("classified_file")
@@ -132,7 +357,39 @@ with left_col:
                 df_test["Отдел"] = df_test["Отдел"].fillna("Администрация") if "Отдел" in df_test.columns else "Администрация"
                 df_test["Муниципалитет"] = df_test["Муниципалитет"].fillna("Омская область") if "Муниципалитет" in df_test.columns else "Омская область"
                 
-                st.info("⏳ Генерация ответов (это может занять время)...")
+                st.markdown("""
+                <div class="pipeline-title">
+                    ⚙️ Процесс генерации
+                </div>
+
+                <div class="pipeline">
+
+                    <div class="step-card">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <b>Подготовка данных</b>
+                            <div class="step-desc">Очистка и нормализация обращений</div>
+                        </div>
+                    </div>
+
+                    <div class="step-card">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <b>Формирование промпта</b>
+                            <div class="step-desc">Добавление темы, отдела и контекста</div>
+                        </div>
+                    </div>
+
+                    <div class="step-card">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <b>Генерация LLM</b>
+                            <div class="step-desc">Создание официального ответа</div>
+                        </div>
+                    </div>
+
+                </div>
+                """, unsafe_allow_html=True)
                 results = []
                 progress_bar = st.progress(0)
                 
@@ -192,7 +449,11 @@ with left_col:
                             mime="text/csv"
                         )
                     
-                    st.subheader("📋 Превью результатов")
+                    st.markdown("""
+                    <div class="pipeline-title">
+                        📄 Результаты генерации
+                    </div>
+                    """, unsafe_allow_html=True)
                     st.dataframe(results_df, use_container_width=True)
                         
             except Exception as e:
